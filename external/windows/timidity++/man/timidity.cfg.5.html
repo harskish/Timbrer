@@ -1,0 +1,775 @@
+<!-- Creator     : groff version 1.21 -->
+<!-- CreationDate: Wed Aug 29 09:22:50 2018 -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
+<meta name="Content-Style" content="text/css">
+<style type="text/css">
+       p       { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       pre     { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       table   { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       h1      { text-align: center }
+</style>
+<title>timidity.cfg</title>
+
+</head>
+<body>
+
+<h1 align="center">timidity.cfg</h1>
+
+<a href="#NAME">NAME</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#VARIABLE">VARIABLE</a><br>
+<a href="#SYNTAX">SYNTAX</a><br>
+<a href="#FILES">FILES</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+<a href="#COPYRIGHT">COPYRIGHT</a><br>
+<a href="#AVAILABILITY">AVAILABILITY</a><br>
+
+<hr>
+
+
+<h2>NAME
+<a name="NAME"></a>
+</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">timidity.cfg
+&minus; configure file of TiMidity++</p>
+
+<h2>DESCRIPTION
+<a name="DESCRIPTION"></a>
+</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">The file
+<b>timidity.cfg</b> describes the runtime environments of
+timidity(1): that are the path of sound font, instruments
+configurations, etc. <b><br>
+TiMidity++</b> looks for the configuration file
+<b>timidity.cfg</b> at startup, before processing any
+options. If it can&rsquo; t be accessed, and the library
+path is changed with a <b>&minus;L</b> option on the command
+line, then the default file will be sought again along the
+new library path after processing all options, unless
+another configuration file was specified with the
+<b>&minus;c</b> option. <br>
+Configuration files define the mapping of MIDI programs to
+instrument files. Multiple files may be specified, and
+statements in later ones will override earlier ones.</p>
+
+<h2>VARIABLE
+<a name="VARIABLE"></a>
+</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">When
+alphanumeric and/or underscore &lsquo; _&rsquo; characters
+continue after dollar sign &lsquo; $&rsquo; , it is
+considered that the string is a variable and the
+configuration file is processed, it is transposed to another
+string. The variable name can also be written with an inside
+parenthesis, in order to separate from a following
+character.</p>
+
+<p style="margin-left:11%; margin-top: 1em">For example:
+<br>
+$variable <br>
+${variable} # same as $variable</p>
+
+<p style="margin-left:11%; margin-top: 1em">For the moment,
+the command which newly defines variables is not prepared.
+The undefined variable is transposed to null string. <br>
+The variable defined as a regular variable is the next only
+one. <b><br>
+$basedir</b></p>
+
+<p style="margin-left:22%;">Expresses the directory where
+the configuration file exists. By the command which mainly
+specifies a path, it uses in order to specify the relative
+path from a setting file. <br>
+When a blank may be included in $basedir, it is necessary to
+bundle with &quot;&quot;.</p>
+
+<p style="margin-left:22%; margin-top: 1em">For example:
+<br>
+In /usr/local/share/timidity/timidity.cfg <br>
+dir $basedir/inst # source
+/usr/local/share/timidity/inst</p>
+
+<h2>SYNTAX
+<a name="SYNTAX"></a>
+</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">The following
+statements can be used in a configuration file: <b><br>
+dir</b> <i>directory [...]</i></p>
+
+<p style="margin-left:22%;">Adds <i>directory</i> to the
+search path in the same manner as the <b>&minus;L</b>
+command line option. <br>
+Archive file are also allowed.</p>
+
+<p style="margin-left:22%; margin-top: 1em">For example:
+<br>
+dir /usr/local/share/timidity/inst/foo.zip# <br>
+bank 0 <br>
+0 bar.pat <br>
+1 baz.pat <br>
+2 zoo.pat</p>
+
+<p style="margin-left:22%; margin-top: 1em">At first,
+<b>dir</b> specifies the archive name (followed by &lsquo;
+#&rsquo; ) for the path of patch files same as directory
+name (in this case, /usr/local/share/timidity/inst/foo.zip).
+<b>TiMidity++</b> recognize the path is an archive file if
+the expression has the last character &lsquo; #&rsquo; , and
+also read the files contained in this archive file. In
+previous example the patch files bar.pat, baz.pat and
+zoo.pat contained in the foo.zip are also installed.</p>
+
+<p style="margin-left:11%;"><b>source</b> <i>file
+[...]</i></p>
+
+<p style="margin-left:22%;">Reads another configuration
+file, then continues processing the current one.</p>
+
+<p style="margin-left:11%;"><b>progbase</b>
+<i>number</i></p>
+
+<p style="margin-left:22%;">Sets and displays the tone
+number from <i>number</i> to <i>number</i>+128. If
+<b>progbase 1</b> are specified, tone numbers that follow
+are set and displayed as the numbers from <b>1</b> to
+<b>128</b>.</p>
+
+<p style="margin-left:11%;"><b>bank</b> <i>[MapID1]
+number</i></p>
+
+<p style="margin-left:22%;">Selects the tone bank to
+modify. Patch mappings that follow will affect this tone
+bank. You can indicate specific map as a target, by
+specifying any of the following to <i>MapID1</i>:
+<b>gm2</b>, <b>sc55</b>, <b>sc88</b>, <b>sc88pro</b>,
+<b>sc8850</b>, <b>xg</b> and <b>xgsfx64</b>.</p>
+
+<p style="margin-left:11%;"><b>drumset</b> <i>[MapID2]
+number</i></p>
+
+<p style="margin-left:22%;">Selects the drum set to modify.
+Patch mappings that follow will affect this drum set. You
+can indicate specific map as a target, by specifying any of
+the following to <i>MapID2</i>: <b>gm2drum</b>,
+<b>sc55drum</b>, <b>sc88drum</b>, <b>sc88prodrum</b>,
+<b>sc8850drum</b>, <b>xgdrum</b> and <b>xgsfx126</b>.</p>
+
+<p style="margin-left:11%;"><b>number</b> <i>file
+[options]</i> <b><br>
+number %font</b> <i>file bank prog [key] [options]</i>
+<b><br>
+number %sample</b> <i>file [options]</i></p>
+
+<p style="margin-left:22%;">Specifies that the MIDI program
+number in the current tone bank or drum set should be played
+using the patch file. If <i>file</i> is SoundFont, the
+specific instrument with <i>bank</i>, <i>prog</i>, and
+<i>key</i> is taken out by the format of <b>number
+%font</b>. If <i>file</i> is linear AIFF or WAV sample data,
+the MIDI program number is specified by the format of
+<b>number %sample</b>. Options may be any of the following:
+<b><br>
+amp=</b><i>amplification</i></p>
+
+<p style="margin-left:32%;">Amplifies the instrument&rsquo;
+s volume by <i>amplification</i> percent. If no value is
+specified, one will be automatically determined whenever the
+instrument is loaded.</p>
+
+<p style="margin-left:22%;"><b>note=</b><i>note</i></p>
+
+<p style="margin-left:32%;">Specifies a fixed MIDI note to
+use when playing the instrument. If <i>note</i> is <b>0</b>,
+the instrument will be played at whatever note the Note On
+event triggering it has. For percussion instruments, if no
+value is specified in the configuration file, the default in
+the patch file will be used.</p>
+
+<p style="margin-left:22%;"><b>pan=</b><i>panning</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s
+default panning. <i>panning</i> may be <b>left</b>,
+<b>right</b>, <b>center</b>, or an integer between
+<b>&minus;100</b> and <b>100</b>, designating full left and
+full right respectively. If no value is specified, the
+default in the patch file will be used. Note that panning
+controls in MIDI files will override this value.</p>
+
+
+<p style="margin-left:22%;"><b>tune=</b><i>tuning[,...]</i></p>
+
+<p style="margin-left:32%;">Adjust the instrument&rsquo; s
+root frequency. <b>tune=1</b> causes <b>1</b> half tone
+higher. Since a fraction is available for <i>tuning</i>, it
+is possible to do fine tuning such as
+<b>tune=&minus;0.2</b>. When two or more sample data is
+contained, the arguments after the second can specify
+different value respectively.</p>
+
+
+<p style="margin-left:22%;"><b>rate=</b><i>attack:decay:sustain:release1:release2:release3[,...]</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s
+ADSR rate. Each value may be an integer between <b>0</b> and
+<b>255</b>. When you set only sustain rate,</p>
+
+<p style="margin-left:32%; margin-top: 1em">6
+GUS/hrpschrd.pat rate=::60</p>
+
+<p style="margin-left:32%; margin-top: 1em">is available.
+When you set only attack time fasten,</p>
+
+<p style="margin-left:32%; margin-top: 1em">6
+GUS/hrpschrd.pat rate=255</p>
+
+<p style="margin-left:32%; margin-top: 1em">is available.
+When two or more sample data is contained, the arguments
+after the second can specify different value
+respectively.</p>
+
+
+<p style="margin-left:22%;"><b>offset=</b><i>attack:decay:sustain:release1:release2:release3[,...]</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s
+ADSR offset. Each value may be an integer between <b>0</b>
+and <b>255</b>. The format is same as <b>rate=</b>.</p>
+
+<p style="margin-left:22%;"><b>keep={loop|env}</b></p>
+
+<p style="margin-left:32%;">By default, percussion
+instruments have their loop and envelope information
+stripped. Strangely shaped envelopes are removed
+automatically from melodic instruments as well. <b>keep=</b>
+can be used to prevent stripping loop or envelope data. For
+example, the Short and Long Whistle percussion instruments
+(General Midi numbers 71 and 72) need to have &lsquo;
+<b>keep=loop keep=env</b>&rsquo; specified in the
+configuration file.</p>
+
+
+<p style="margin-left:22%;"><b>strip={loop|env|tail}</b></p>
+
+<p style="margin-left:32%;">Force removal of loop or
+envelope information from all patches in the instrument, or
+strip the tail, i.e. all data after the loop. Some
+third&minus;party instruments have garbage after the loop,
+as evidenced by a clicking noise whenever the instrument is
+played, so adding the <b>strip=tail</b> option will markedly
+improve sound quality.</p>
+
+
+<p style="margin-left:22%;"><b>tremolo=</b><i>sweep_increment:control_ratio:depth[,...]</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s
+tremolo. Each value may be an integer between <b>0</b> and
+<b>255</b>. The format is similar to <b>rate=</b>.
+<i>sweep_increment</i> is the time until tremolo is started.
+<i>control_ratio</i> is the rate changing amplification.
+<i>depth</i> is the depth changing amplification.</p>
+
+
+<p style="margin-left:22%;"><b>vibrato=</b><i>sweep_increment:phase_increment:depth[,...]</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s
+vibrato. Each value may be an integer between <b>0</b> and
+<b>255</b>. The format is similar to <b>rate=</b>.
+<i>sweep_increment</i> is the time until vibrato is started.
+<i>phase_increment</i> is the rate changing frequency.
+<i>depth</i> is the depth changing frequency.</p>
+
+
+<p style="margin-left:22%;"><b>sclnote=</b><i>note[,...]</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s
+standard note for scale tuning. For example,
+<b>sclnote=60</b> causes the center note C to be standard
+note for scale tuning. When two or more sample data is
+contained, the arguments after the second can specify
+different value respectively.</p>
+
+
+<p style="margin-left:22%;"><b>scltune=</b><i>tune[,...]</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s
+scale tuning factor in cents. For example, <b>scltune=50</b>
+causes the half tone steps as <b>50</b> cents. When two or
+more sample data is contained, the arguments after the
+second can specify different value respectively.</p>
+
+<p style="margin-left:22%;"><b>comm=</b><i>comment</i></p>
+
+<p style="margin-left:32%;">Specifies the comment
+<i>comment</i>.</p>
+
+
+<p style="margin-left:22%;"><b>modrate=</b><i>attack:decay:sustain:release1:release2:release3[,...]</i>
+<b><br>
+
+modoffset=</b><i>attack:decay:sustain:release1:release2:release3[,...]</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s
+behavior of change of modulation envelope. The format and
+values are fundamentally same as volume envelope. Except for
+some SoundFonts, even if it specifies only the option,
+nothing happens.</p>
+
+
+<p style="margin-left:22%;"><b>envkeyf=</b><i>attack:decay:sustain:release1:release2:release3[,...]</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s
+volume envelope key follow. Based on <b>note=60</b>, it
+changes envelope time according to note. The unit is
++&minus;cent/key. For example, <b>envkeyf=100</b> means that
+the attack time will double when it goes up by 1 octave. The
+format is similar to <b>rate=</b>. The parameter of
+<i>decay</i> and <i>sustain</i> may be preset in some
+SoundFont.</p>
+
+
+<p style="margin-left:22%;"><b>envvelf=</b><i>attack:decay:sustain:release1:release2:release3[,...]</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s
+volume envelope velocity follow. Based on
+<b>velocity=64</b>, it changes envelope time according to
+velocity. The unit is +&minus;cent/velocity. For example,
+<b>envvelf=100</b> means that the attack time will 38 times
+at <b>velocity=127</b>. The format is similar to
+<b>rate=</b>. In the future, the specification of this
+option may be changed.</p>
+
+
+<p style="margin-left:22%;"><b>modkeyf=</b><i>attack:decay:sustain:release1:release2:release3[,...]</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s
+modulation envelope key follow. Based on <b>note=60</b>, it
+changes envelope time according to note. The unit is
++&minus;cent/key. For example, <b>modkeyf=100</b> means that
+the attack time will double when it goes up by 1 octave. The
+format is similar to <b>rate=</b>. The parameter of
+<i>decay</i> and <i>sustain</i> may be preset in some
+SoundFont.</p>
+
+
+<p style="margin-left:22%;"><b>modvelf=</b><i>attack:decay:sustain:release1:release2:release3[,...]</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s
+modulation envelope velocity follow. Based on
+<b>velocity=64</b>, it changes envelope time according to
+velocity. The unit is +&minus;cent/velocity. For example,
+<b>modvelf=100</b> means that the attack time will 38 times
+at <b>velocity=127</b>. The format is similar to
+<b>rate=</b>. In the future, the specification of this
+option may be changed.</p>
+
+
+<p style="margin-left:22%;"><b>trempitch=</b><i>num[,...]</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s
+depth of changing pitch according to tremolo. The effect
+itself is same as vibrato, it uses to operate in another
+system. The unit is +&minus;cent. The format is similar to
+<b>rate=</b>.</p>
+
+
+<p style="margin-left:22%;"><b>tremfc=</b><i>num[,...]</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s
+depth of changing cutoff frequency according to tremolo. It
+can express the so&minus;called glowl effect. The unit, etc.
+are same as <b>trempitch=</b>.</p>
+
+
+<p style="margin-left:22%;"><b>modpitch=</b><i>num[,...]</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s
+depth of changing pitch according to modulation envelope. It
+can temporarily express raising pitch only for the attack
+stage. The unit, etc. are same as <b>trempitch=</b>.</p>
+
+
+<p style="margin-left:22%;"><b>modfc=</b><i>num[,...]</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s
+depth of changing cutoff frequency according to modulation
+envelope. The unit, etc. are same as <b>trempitch=</b>.</p>
+
+<p style="margin-left:22%;"><b>fc=</b><i>num[,...]</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s
+standard of cutoff frequency. The unit is Hz. The format is
+similar to <b>rate=</b>.</p>
+
+<p style="margin-left:22%;"><b>q=</b><i>num[,...]</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s Q
+(resonance). The unit is cB. The format is similar to
+<b>rate=</b>.</p>
+
+<p style="margin-left:22%;"><b>fckeyf=</b><i>num</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s
+filter key follow. Based on <b>note=60</b>, it change cutoff
+frequency according to note. The unit is +&minus;cent/key.
+For example, <b>fckeyf=100</b> means that it changes same as
+pitch.</p>
+
+<p style="margin-left:22%;"><b>fcvelf=</b><i>num</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s
+filter velocity follow. Based on <b>velocity=127</b>, it
+changes cutoff frequency according to velocity. The unit is
++&minus;cent. In SoundFont, <b>&minus;2400</b> is set up as
+a characteristic value.</p>
+
+<p style="margin-left:22%;"><b>qvelf=</b><i>num</i></p>
+
+<p style="margin-left:32%;">Sets the instrument&rsquo; s
+resonance velocity follow. Based on <b>velocity=0</b>, it
+changes resonance according to velocity. The unit is
++&minus;cB.</p>
+
+<p style="margin-left:11%;"><b>default</b> <i>file</i></p>
+
+<p style="margin-left:22%;">When MIDI program appears,
+which is not mapped to instrument file, this file is
+pronounced as a substitute.</p>
+
+<p style="margin-left:11%;"><b>map</b> <i>MapID1
+from&minus;bank from&minus;prog to&minus;bank
+to&minus;prog</i></p>
+
+<p style="margin-left:22%;">The existing tone is assigned
+as a tone of GS/XG each map. <b>gm2</b>, <b>sc55</b>,
+<b>sc88</b>, <b>sc88pro</b>, <b>sc8850, xg</b> and
+<b>xgsfx64</b> can be specified to be <i>MapID1</i>.</p>
+
+<p style="margin-left:11%;"><b>map</b> <i>MapID2
+from&minus;drumset from&minus;keynote to&minus;drumset
+to&minus;keynote</i></p>
+
+<p style="margin-left:22%;">The existing drum is assigned
+as a drum of GS/XG each map. <b>gm2drum</b>,
+<b>sc55drum</b>, <b>sc88drum</b>, <b>sc88prodrum</b>,
+<b>sc8850drum</b>, <b>xgdrum</b> and <b>xgsfx126</b> can be
+specified to be <i>MapID2</i>.</p>
+
+<p style="margin-left:11%;"><b>soundfont</b> <i>file
+[options]</i></p>
+
+<p style="margin-left:22%;">Read the whole SoundFont.
+<i>options</i> may be any of the following: <b><br>
+order=</b><i>number</i></p>
+
+<p style="margin-left:32%;">Sets the order of searching for
+instrument. When <b>order=0</b>, first read SoundFont, and
+then search for insufficient samples in GUS/patch. When
+<b>order=1</b>, after reading GUS/patch, search for
+SoundFont.</p>
+
+
+<p style="margin-left:22%;"><b>amp=</b><i>amplification</i></p>
+
+<p style="margin-left:32%;">Sets the amplification of the
+whole SoundFont as <i>amplification</i>%. If the value is
+not specified, it is set by <b>100</b>%.</p>
+
+
+<p style="margin-left:22%;"><b>cutoff=</b><i>number</i></p>
+
+<p style="margin-left:32%;">Specifies whether LPF in
+SoundFont is enable (<b>1</b>) or disable (<b>0</b>). If the
+value is not specified, it is considered to be enable.</p>
+
+<p style="margin-left:22%;"><b>reso=</b><i>number</i></p>
+
+<p style="margin-left:32%;">Specifies whether resonance in
+SoundFont is enable (<b>1</b>) or disable (<b>0</b>). If the
+value is not specified, it is considered to be enable.</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="22%"></td>
+<td width="9%">
+
+
+<p><b>remove</b></p></td>
+<td width="1%"></td>
+<td width="68%">
+
+
+<p>Cancels the target SoundFont from the memory.</p></td></tr>
+</table>
+
+<p style="margin-left:11%;"><b>font exclude</b> <i>bank
+[prog [key]]</i></p>
+
+<p style="margin-left:22%;">Suppresses searching for
+SoundFont of <i>bank</i>, <i>prog</i>. If the sample is
+drumset, bank is <b>128</b>, drumset is <i>prog</i>, keynum
+is <i>key</i>.</p>
+
+<p style="margin-left:11%;"><b>font order</b> <i>number
+bank [prog [key]]</i></p>
+
+<p style="margin-left:22%;">Sets the order of searching for
+instrument individually. The format is same as <b>font
+exclude</b>.</p>
+
+<p style="margin-left:11%; margin-top: 1em">The following
+statements are available only latest <b>TiMidity++</b>.
+<b><br>
+#extension altassign</b> <i>program1 program2 ...</i></p>
+
+<p style="margin-left:22%;">Sets the alternate assign for
+drum set. For example, if you want to pronounce Hi&minus;Hat
+cymbals (note number <b>42</b>, <b>44</b> and <b>46</b>) in
+the <b>drumset 0</b> exclusively to each others,
+specify:</p>
+
+<p style="margin-left:22%; margin-top: 1em">drumset 0 <br>
+altassign 42 44 46</p>
+
+<p style="margin-left:22%; margin-top: 1em">Note that
+alternate assign of <b>drumset 0</b> is used by default.</p>
+
+<p style="margin-left:11%;"><b>#extension comm</b>
+<i>program comment</i></p>
+
+<p style="margin-left:22%;">Specifies the comment
+<i>comment</i> for the tone number <i>program</i>. These
+comments are displayed in the indicator line when
+<b>TiMidity++</b> is booted with option <b>&minus;int</b>,
+<b>&minus;iTt</b>.</p>
+
+<p style="margin-left:11%;"><b>#extension timeout</b>
+<i>program second</i></p>
+
+<p style="margin-left:22%;">Specifies the time&minus;out
+value of the <i>program</i>. If any notes played with the
+tone number <i>program</i> are suspended for more than
+<i>second</i> seconds, <b>TiMidity++</b> kills the
+notes.</p>
+
+<p style="margin-left:11%;"><b>#extension copydrumset</b>
+<i>drumset</i></p>
+
+<p style="margin-left:22%;">Copies all settings of the
+<i>drumset</i> to the current drumset.</p>
+
+<p style="margin-left:11%;"><b>#extension copybank</b>
+<i>bank</i></p>
+
+<p style="margin-left:22%;">Copies all settings of the
+<i>bank</i> to the current bank.</p>
+
+<p style="margin-left:11%;"><b>#extension copymap</b>
+<i>to&minus;MapID from&minus;MapID</i></p>
+
+<p style="margin-left:22%;">Copies all settings of the
+banks defined for the map <i>from&minus;MapID</i> to the map
+<i>to&minus;MapID</i>.</p>
+
+<p style="margin-left:11%;"><b>#extension HTTPproxy</b>
+<i>hostname:port</i></p>
+
+<p style="margin-left:22%;">Specifies the proxy of the HTTP
+protocol. <i>hostname</i> and <i>port</i> <b>are of the
+proxy host&rsquo; s.</b></p>
+
+<p style="margin-left:11%;"><b>#extension FTPproxy</b>
+<i>hostname:port</i></p>
+
+<p style="margin-left:22%;">Specifies the proxy of the FTP
+protocol. Same as HTTP.</p>
+
+<p style="margin-left:11%;"><b>#extension mailaddr</b>
+<i>your&minus;mail&minus;address</i></p>
+
+<p style="margin-left:22%;">Specifies user&rsquo; s mail
+address. This address is sent to the FTP server if
+<b>TiMidity++</b> access any file via FTP.</p>
+
+<p style="margin-left:11%;"><b>#extension opt</b>
+<i>option</i></p>
+
+<p style="margin-left:22%;">Sets the value of
+boot&minus;time options.</p>
+
+<p style="margin-left:11%;"><b>#extension undef</b>
+<i>progno</i></p>
+
+<p style="margin-left:22%;">Undefines the tone
+<i>progno</i> of current tone bank.</p>
+
+<p style="margin-left:11%;"><b>#extension legato</b>
+<i>progno</i> <b>{0|1}</b></p>
+
+<p style="margin-left:22%;">Specifies whether legato is
+enable (<b>1</b>) or disable (<b>0</b>) on
+<i>progno</i>.</p>
+
+<p style="margin-left:11%;"><b>#extension level</b>
+<i>progno tva_level</i></p>
+
+<p style="margin-left:22%;">Sets the standard value of
+changing amplification when processing Drum Instrument TVA
+Level of NRPN. Unless Drum Instrument TVA Level is specified
+at playing, the amplification is not influenced.
+<i>progno</i> can carry out package specification by &lsquo;
+,&rsquo; and/or [<i>start</i>]&minus;[<i>end</i>]. If start
+and end are omitted, they are assumed to be <b>0</b> and
+<b>127</b> respectively.</p>
+
+<p style="margin-left:11%;"><b>#extension damper</b>
+<i>progno</i> <b>{0|1}</b></p>
+
+<p style="margin-left:22%;">Specifies whether redamper and
+half-damper are enable (<b>1</b>) or disable (<b>0</b>) on
+<i>progno</i>.</p>
+
+<p style="margin-left:11%;"><b>#extension playnote</b>
+<i>progno note</i></p>
+
+<p style="margin-left:22%;">Sets the frequency of pronounce
+to <b>note</b>. If the frequency of pronounce is specified
+by GS SysEx Play Note, the pitch is changed appropriately
+according to the value. <i>progno</i> can carry out package
+specification by &lsquo; ,&rsquo; and/or
+[<i>start</i>]&minus;[<i>end</i>]. If start and end are
+omitted, they are assumed to be <b>0</b> and <b>127</b>
+respectively.</p>
+
+<p style="margin-left:22%; margin-top: 1em">For example:
+<br>
+drumset 0 <br>
+#extension playnote &minus;37,39,44&minus;46,55&minus;60</p>
+
+<p style="margin-left:11%;"><b>#extension delaysend</b>
+<i>progno level</i> <b><br>
+#extension chorussend</b> <i>progno level</i> <b><br>
+#extension reverbsend</b> <i>progno level</i></p>
+
+<p style="margin-left:22%;">Sets the send level when drum
+part effect is enable. All initial value are <b>127</b>. If
+one of delay, chorus and reverb is at least set up, the
+effect which is not set as the tone will become the initial
+value <b>0</b>. <i>progno</i> can carry out package
+specification by &lsquo; ,&rsquo; and/or
+[<i>start</i>]&minus;[<i>end</i>]. If start and end are
+omitted, they are assumed to be <b>0</b> and <b>127</b>
+respectively.</p>
+
+<p style="margin-left:11%;"><b>#extension rnddelay</b>
+<i>progno msec</i></p>
+
+<p style="margin-left:22%;">For every pronunciation, it is
+random and less than a maximum of <i>msec</i> delay. The
+distribution of random value is pink noise (1/f fluctuation)
+rather than a white noise.</p>
+
+<p style="margin-left:11%; margin-top: 1em">These
+<b>#extension</b> statements are beginning with character
+&lsquo; #&rsquo; that is the comment flag of old TiMidity
+(version 0.2i or earlier). So these statements are treated
+as comment line. <br>
+The latest <b>TiMidity++</b> treats <b>#extension</b> as
+white&minus;space. So you can omit it.</p>
+
+<p style="margin-left:11%; margin-top: 1em">If any
+file&minus;name expression ended with character &lsquo;
+|&rsquo; (Ascii 0x7c), the file&minus;name is treated as
+command and outputs of the command are also examined as
+arguments of statements. <b><br>
+source</b> <i>command</i>| causes the output of
+<i>command</i> becomes the argument of <b>source</b>. It is
+convenient to choose settings of <b>TiMidity++</b> according
+to environment. In addition, if a space enters on the way
+like <i>command</i> |, it will be divided at the time of
+setting file reading, and will no longer be regarded as a
+command. This function is applicable to all the places that
+can specify a file name.</p>
+
+<p style="margin-left:22%; margin-top: 1em">timidity
+&rsquo; cat fild.mid|&rsquo;</p>
+
+<p style="margin-left:11%; margin-top: 1em">will read from
+the output of cat fild.mid.</p>
+
+<h2>FILES
+<a name="FILES"></a>
+</h2>
+
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>/etc/timidity.cfg
+<br>
+/usr/local/share/timidity/timidity.cfg</b></p>
+
+<h2>SEE ALSO
+<a name="SEE ALSO"></a>
+</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">timidity(1),
+lsmidiprog(1), mididump(1), patinfo(1), sf2text(1),
+wav2pat(1)</p>
+
+<h2>COPYRIGHT
+<a name="COPYRIGHT"></a>
+</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">Copyright (C)
+1999&minus;2004 Masanao Izumo &lt;iz@onicos.co.jp&gt; <br>
+Copyright (C) 1995 Tuukka Toivonen &lt;tt@cgs.fi&gt;</p>
+
+<p style="margin-left:11%; margin-top: 1em">The original
+version was developed by Tuukka Toivonen &lt;tt@cgs.fi&gt;
+until the release of TiMidity&minus;0.2i. His development
+was discontinued because of his being busy with work.</p>
+
+<p style="margin-left:11%; margin-top: 1em">This program is
+free software; you can redistribute it and/or modify it
+under the terms of the <i>GNU General Public License</i> as
+published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.</p>
+
+<p style="margin-left:11%; margin-top: 1em">This program is
+distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+<i>GNU General Public License</i> for more details.</p>
+
+<p style="margin-left:11%; margin-top: 1em">You should have
+received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation,
+Inc., 59 Temple Place, Suite 330, Boston, MA
+02111&minus;1307 USA</p>
+
+<h2>AVAILABILITY
+<a name="AVAILABILITY"></a>
+</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">The latest
+release is available on the <b>TiMidity++</b> Page,</p>
+
+<p style="margin-left:11%; margin-top: 1em">URL
+https://sourceforge.net/projects/timidity/</p>
+<hr>
+</body>
+</html>

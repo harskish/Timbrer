@@ -1,0 +1,284 @@
+2018-08-29  TAMUKI Shoichi <tamuki@linet.gr.jp>
+
+	* timidity/readmidi.c: Fix for CVE-2017-11546
+	  Avoid divide-by-zero error when received invalid time signature meta
+	  event during playing.
+	* NEWS, configure.in, interface/ncurs_c.c, interface/w32g_i.c,
+	  interface/w32g_res.rc, timidity/timidity.c: Bump version to 2.15.0
+	  - Update version to 2.15.0.
+	  - Update copyright year to 2018.
+	  - Update NEWS.
+
+2018-08-11  TAMUKI Shoichi <tamuki@linet.gr.jp>
+
+	* configure.in: Support for Tcl/Tk 8.6
+
+2016-06-04  TAMUKI Shoichi <tamuki@linet.gr.jp>
+
+	* timidity/readmidi.c: Fix around segment play
+	  Add a simple workaround to fix the problem that some MIDI files
+	  would not seek forward to the first time segment.
+	* doc/C/timidity.1, doc/ja_JP.eucJP/timidity.1, timidity/readmidi.c,
+	  timidity/readmidi.h, timidity/timidity.c: Improve the specification
+	  of segment play option
+	  In addition to [<minutes>:]<seconds>[.<milliseconds>] specification,
+	  <measure>[.<beat>] specification is also now available.  For
+	  example: -G11.4-16m
+
+2016-05-28  TAMUKI Shoichi <tamuki@linet.gr.jp>
+
+	* interface/dumb_c.c: Add metronome indicator in dumb interface trace
+	  mode
+
+2016-05-25  TAMUKI Shoichi <tamuki@linet.gr.jp>
+
+	* interface/dumb_c.c, interface/emacs_c.c, interface/gtk_c.c,
+	  interface/mac_c.c, interface/motif_c.c, interface/ncurs_c.c,
+	  interface/slang_c.c, interface/tk_c.c, interface/vt100_c.c,
+	  interface/w32g_c.c, interface/w32g_subwin3.c, interface/w32g_utl.c,
+	  interface/xaw_c.c, interface/xskin_c.c, timidity/controls.h,
+	  timidity/playmidi.c, timidity/readmidi.c, timidity/timidity.c,
+	  windrv/timiwp_timidity.c: Fix and improve around segment play
+	  - Avoid memory leaks if multiple --segment (-G) options are
+	    specified.  Specifying multiple --segment (-G) options is also now
+	    available.  For example: -G00:30-00:45 -G01:15-01:30
+	  - Avoid segment time deviation when controlling speed up/down by
+	    user on the fly.
+	  - Avoid double free opt_aq_fill_buff if --audio-buffer (-q) option
+	    is specified.
+	  - Improve segment playing accuracy with CTLE_CUEPOINT to be handled
+	    correctly.
+	  - Fix sample_count adjustment in apply_controls() if midi_time_ratio
+	    is changed.
+
+2016-05-15  TAMUKI Shoichi <tamuki@linet.gr.jp>
+
+	* doc/C/timidity.1, doc/ja_JP.eucJP/timidity.1, timidity/mac_qt_a.c,
+	  timidity/playmidi.c, timidity/playmidi.h, timidity/readmidi.c,
+	  timidity/readmidi.h, timidity/timidity.c: Add support for segment
+	  play option (-G, --segment)
+	  Play just sub-segment(s) specified by comma separated time segments.
+	  Each time segment defined by dash separated time values of
+	  begin-end.  Playing from begin to end.
+
+2016-04-04  Alexander Myltsev <myltsev@yandex-team.ru>
+
+	* timidity/readmidi.c: Fix --preserve-silence killing the first note.
+
+2016-03-21  Stian Skjelstad <stian.skjelstad@gmail.com>
+
+	* timidity/mfi.c: inline, defaults to "extern inline" with newer gcc
+	  versions
+	  With newer versions of gcc, "inline" defaults to extern, and not
+	  static if not specified. This causes linking problems at the end of
+	  the compile. Most of this occurences are fixed (or #ifdef'ed away)
+	  except these two small ones in timidity/mfi.c
+
+2016-03-19  SATO Kentaro <kentaro@ranvis.com>
+
+	* README, README.ja, doc/C/timidity.1, doc/C/timidity.cfg.5,
+	  doc/ja_JP.eucJP/timidity.1, doc/ja_JP.eucJP/timidity.cfg.5: Remove
+	  unowned domain URL from docs.
+
+2015-04-21  TAMUKI Shoichi <tamuki@linet.gr.jp>
+
+	* doc/ja_JP.eucJP/timidity.1: Fix to Japanese man page
+	* autogen.sh: autogen.sh: create ChangeLog in a VCS-independent way
+
+2015-04-21  Stas Sergeev <stsp@users.sourceforge.net>
+
+	* doc/C/timidity.1: fixes to man page
+	* autogen.sh: autogen.sh: create ChangeLog that is required by
+	  automake
+
+2015-04-21  Tobias Markus <tobbi@mozilla-uk.org>
+
+	* timidity/timidity.c: Fix coverity memory leak issues
+
+2014-08-21  yta <yta@inter7.jp>
+
+	* timidity/w32_a.c: Fix NULL pointer access issue (Windows audio
+	  driver output)
+	  Add DriverClosing and OutputWorking flags.  If TiMidity++ called
+	  close_output during a stop at output_data, app cause a NULL pointer
+	  access.  After changing, WaitForBuffer(1) to stop until return from
+	  output_data.
+	* timidity/reverb.c: Fix reverb buffer-overrun issue
+	  Add code to check the upper limit of the index.  TiMidity++ to
+	  buffer- overrun when the value of the reverb_status_gs.character was
+	  a 6 or 7.  info->index is set to a value out of range when the value
+	  of the "Reverb Time" was -64.
+
+2014-08-15  TAMUKI Shoichi <tamuki@linet.gr.jp>
+
+	* interface/ncurs_c.c, interface/w32g_i.c, interface/w32g_res.rc,
+	  timidity/timidity.c: Update copyright year to 2014
+	  Update copyright year to 2014 and replace the old e-mail address to
+	  new one.
+
+2014-08-15  yta <yta@inter7.jp>
+
+	* windrv/mmddk.h, windrv/timiditydrv.c: Fix Windows Driver
+	  Add DriverCallback API.  The driver must call the DriverCallback
+	  API.  After changing, some MIDI sequencers will not freeze: XGWorks,
+	  Domino, etc.
+
+2014-06-09  TAMUKI Shoichi <tamuki@linet.gr.jp>
+
+	* configure.in, timidity/timidity.c: Fix ssize_t type test and
+	  conditional compilation
+	  Fix ssize_t type test because older versions of autoconf do not
+	  support AC_TYPE_SSIZE_T macro.  Also, fix conditional compilation
+	  for older versions of MinGW.
+
+2014-05-24  SATO Kentaro <kentaro@ranvis.com>
+
+	* timidity/flac_a.c, timidity/timidity.c: Minor fixes for conditional
+	  compile.
+	* configure.in, timidity/timidity.c: Revert some fix and add ssize_t
+	  type test.
+
+2011-06-21  SATO Kentaro <kentaro@ranvis.com>
+
+	* libarc/url_http.c: Fix HTTPproxy not working on http URL.
+
+2009-12-19  SATO Kentaro <kentaro@ranvis.com>
+
+	* timidity/aq.c: Fix crash on sample size change while running.
+
+2011-05-07  SATO Kentaro <kentaro@ranvis.com>
+
+	* timidity/flac_a.c, timidity/timidity.c, timidity/timidity.h,
+	  timidity/wave_a.c, utils/net.c, windrv/timiditydrv.c: Fix some
+	  compilation issues on Windows.
+	* interface/w32g_i.c: Change Windows GUI volume slider max.
+	  Volume control of W32GUI interface currently changes rendering
+	  amplification, not playback volume.
+
+2014-05-22  SATO Kentaro <kentaro@ranvis.com>
+
+	* interface/w32g_res.rc: Update version number in Windows resource.
+
+2014-05-13  Yair K <cesium2@gmail.com>
+
+	* timidity/ao_a.c: Fix ao options crash
+	  Initialize ao_options to NULL, so as to avoid crash when no options
+	  are specified.
+	* interface/tk_c.c: Fix tk interface compile with tk8.6
+	  Direct access to interp->result is disallowed in 8.6, so use
+	  Tcl_GetStringResult instead. Also increase MAX_TK_MIDI_CHANNELS to
+	  fix compile warning.
+
+2013-12-12  TAMUKI Shoichi <tamuki@linet.gr.jp>
+
+	* interface/Makefile.am: Prefix ./ to escape_sjis.pl in Makefile to
+	  execute the script
+
+2013-11-06  TAMUKI Shoichi <tamuki@linet.gr.jp>
+
+	* configure.in, interface/ncurs_c.c, timidity/playmidi.c,
+	  timidity/playmidi.h, timidity/timidity.c, windrv/timiditydrv.c:
+	  Gleaning various fixes
+	  - Fix vwprintw to fit with newer PDCurses
+	  - Fix control_mode_event args to use ptr_size_t
+	  - Fix read_config_file to be used in another main
+	  - Fix around MIDIOUTCAPS2 in windrv/timiditydrv.c
+
+2013-11-04  Yale Zhang <yzhang1985@gmail.com>
+
+	* windrv/timiditydrv.c, windrv/timiditydrv.def: Windows MIDI driver
+	  improved
+	  - Stop sending all MIDI messages to a worker thread to be played.
+	    Instead, call the event handler directly (with mutual exclusion).
+	    This simplifies the code and reduces latency.
+	  - Move initialization before worker thread creation - without this,
+	    TiMidity++ might not be initialized before the 1st message arrives
+	    (I actually had this problems when using VMPK, which sends a bank
+	    & program change message immediately on startup)
+	* timidity/w32_a.c: Refactor w32_a.c and disable the debug messages
+
+2013-11-03  TAMUKI Shoichi <tamuki@linet.gr.jp>
+
+	* timidity/output.c, timidity/timidity.c, utils/getaddrinfo.c,
+	  utils/tmdy_getopt.h: Fix to fit with MinGW environment
+
+2012-10-20  Yair K <cesium2@gmail.com>
+
+	* timidity/ao_a.c: Allow setting ao backend options via environment
+	  Let libao backend set ao options via TIMIDITY_AO_OPTIONS environment
+	  variable.  The variable accepts "key=value" pairs seperated by
+	  commans.  For example: TIMIDITY_AO_OPTIONS="use_mmap=1,id=1" for
+	  ALSA ao backend.  TIMIDITY_AO_OPTIONS="server=example.com:4713" etc.
+	  Notes: 1. Later options have precendance over earlier ones in libao.
+	  2. Spaces are not trimmed, but supplied as is.  3. In case of
+	  "key=,", an empty string is passed to ao as value.
+
+2012-10-20  Kyle Guinn <elyk03@gmail.com>
+
+	* doc/C/timidity.cfg.5:
+	  Fix typo on timidity.cfg.5.
+	  Fix typo on timidity.cfg.5. Patch sent by Kyle Guinn.
+
+2012-09-05  TAMUKI Shoichi <tamuki@linet.gr.jp>
+
+	* ChangeLog, ChangeLog.3, Makefile.am: Move ChangeLog to ChangeLog.3
+	  Remove ChangeLog, it will be generated from git log.
+	* configure.in, interface/Makefile.am, interface/tclIndex: Remove
+	  tclIndex due to autogenerated file
+	  auto_mkindex will now run with tclsh instead of wish.
+
+2012-08-20  Yair K <cesium2@gmail.com>
+
+	* interface/Makefile.am, interface/tk_c.c, interface/tkpanel.tcl:
+	  Include xbm bitmaps in the tcl interface itself
+	  Include xbm bitmaps in the tcl interface itself rather than as files
+	  in the system.
+	  Also, include tcl.h a bit later to avoid a redefine warning on
+	  reverb.h.
+	* TODO, configure.in, interface/xaw_i.c: Xaw interface: minor
+	  improvements
+	  * Get rid of unnecessary argument to expandDir
+	  * Free memory returned from XawListShowCurrent
+	  * Remove outdated comment from TODO
+
+2012-08-20  Hans de Goede <hdegoede@redhat.com>
+
+	* interface/server_c.c, interface/server_defs.h, timidity/midi_a.c:
+	  Always use local OSSv3's midi sequencer definitions
+	  From NetBSD pkgsrc:
+	  http://www.netbsd.org/docs/software/packages.html
+	  Both the midi output mode and the server interface try to collect
+	  some local MIDI macro definitions instead of using its own. Problem
+	  is some systems have a 'compatibility' soundcard.h file which is
+	  detected by configure but doesn't have the MIDI defines (e.g.
+	  NetBSD's libossaudio).  So always use the internal defines.
+	  Add a comment to server_defs.h to show how to still get the defines
+	  from the system if desired.
+
+2012-08-20  Yair K <cesium2@gmail.com>
+
+	* libunimod/load_669.c, libunimod/load_amf.c, libunimod/load_dsm.c,
+	  libunimod/load_far.c, libunimod/load_gdm.c, libunimod/load_imf.c,
+	  libunimod/load_it.c, libunimod/load_m15.c, libunimod/load_med.c,
+	  libunimod/load_mod.c, libunimod/load_mtm.c, libunimod/load_okt.c,
+	  libunimod/load_s3m.c, libunimod/load_stm.c, libunimod/load_stx.c,
+	  libunimod/load_ult.c, libunimod/load_uni.c, libunimod/load_xm.c,
+	  libunimod/mlutil.c, libunimod/unimod.h, libunimod/unimod_priv.h:
+	  Bring in some fixes from mikmod.hg.sf.net
+	  Bring in some fixes from mikmod.hg.sf.net for CVE-2009-0179,
+	  CVE-2009-3996, CVE-2010-2546 and CVE-2010-2971. Also, staticize most
+	  functions as in that version. Could perhaps use a bit more testing.
+
+2012-08-20  Hans de Goede <hdegoede@redhat.com>
+
+	* interface/xskin_c.c: Revert for required ctl_speana_data function
+	  From gentoo timidity++-2.14.0 packages:
+	  This will revert part of the commit from:
+	  http://timidity.git.sourceforge.net/git/gitweb.cgi?p=timidity/timidi
+	  ty;a=commit;h=e73b53437dbc1e57e61dd4d0c1407784797b08d9
+	  Because otherwise TiMidity++ simply won't build as per:
+	  ../interface/libinterface.a(xskin_c.o): In function `ctl_event':
+	  xskin_c.c:(.text+0x17c): undefined reference to `ctl_speana_data'
+	  collect2: error: ld returned 1 exit status
+
+For the changes before 2.14.0, see ChangeLog.3
