@@ -1,3 +1,5 @@
+This work is a derivative of [pix2pixHD](https://github.com/NVIDIA/pix2pixHD) by NVIDIA Corporation.
+
 Installation:
 
 install anaconda
