@@ -52,8 +52,6 @@ def main():
     dataset_size = len(data_loader)
     print('#training images = %d' % dataset_size)
 
-    test = data_loader.dataset.__getitem__(0)
-
     model = create_model(opt)
     visualizer = Visualizer(opt)
     if opt.fp16:    
