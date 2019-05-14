@@ -1,6 +1,6 @@
 ### Copyright (C) 2017 NVIDIA Corporation. All rights reserved. 
 ### Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode).
-### Modified by Erik Härkönen, 2019
+### Modified by Erik Härkönen and Pauli Kemppinen, 2019
 import numpy as np
 import torch
 import os
@@ -192,7 +192,9 @@ class Pix2PixHDModel(BaseModel):
         # VGG feature matching loss
         loss_G_VGG = 0
         if not self.opt.no_vgg_loss:
-            loss_G_VGG = self.criterionVGG(fake_image, real_image) * self.opt.lambda_feat
+            src_in = fake_image.repeat(1,3,1,1) if self.opt.input_nc == 1 else fake_image
+            dst_in = real_image.repeat(1,3,1,1) if self.opt.input_nc == 1 else real_image
+            loss_G_VGG = self.criterionVGG(src_in, dst_in) * self.opt.lambda_feat
         
         # Only return the fake_B image if necessary to save BW
         return [ self.loss_filter( loss_G_GAN, loss_G_GAN_Feat, loss_G_VGG, loss_D_real, loss_D_fake ), None if not infer else fake_image ]

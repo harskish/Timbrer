@@ -27,7 +27,8 @@ def main():
     opt.label_nc = 0
     opt.no_instance = True
     opt.timbrer = True
-    print('TODO: single channel mel-spectrogram inputs!')
+    opt.input_nc = 1
+    opt.output_nc = 1
 
     iter_path = os.path.join(opt.checkpoints_dir, opt.name, 'iter.txt')
     if opt.continue_train:
@@ -122,6 +123,7 @@ def main():
             if save_fake:
                 visuals = OrderedDict([('input_label', util.tensor2label(data['label'][0], opt.label_nc)),
                                     ('synthesized_image', util.tensor2im(generated.data[0])),
+                                    ('synthesized_image_np', np.maximum(0.0, generated.data[0].cpu().float().numpy())),
                                     ('real_image', util.tensor2im(data['image'][0]))])
                 visualizer.display_current_results(visuals, epoch, total_steps)
 

@@ -63,8 +63,12 @@ class Visualizer():
                         img_path = os.path.join(self.img_dir, 'epoch%.3d_%s_%d.jpg' % (epoch, label, i))
                         util.save_image(image_numpy[i], img_path)
                 else:
-                    img_path = os.path.join(self.img_dir, 'epoch%.3d_%s.jpg' % (epoch, label))
-                    util.save_image(image_numpy, img_path)
+                    if label == 'synthesized_image_np':
+                        np_path = os.path.join(self.img_dir, 'epoch%.3d_gen.npy' % epoch)
+                        np.save(np_path, image_numpy)
+                    else:
+                        img_path = os.path.join(self.img_dir, 'epoch%.3d_%s.jpg' % (epoch, label))
+                        util.save_image(image_numpy, img_path)
 
             # update website
             webpage = html.HTML(self.web_dir, 'Experiment name = %s' % self.name, refresh=30)
@@ -81,6 +85,9 @@ class Visualizer():
                             ims.append(img_path)
                             txts.append(label+str(i))
                             links.append(img_path)
+                    elif label == 'synthesized_image_np':
+                        # don't add to html
+                        continue
                     else:
                         img_path = 'epoch%.3d_%s.jpg' % (n, label)
                         ims.append(img_path)
@@ -124,6 +131,10 @@ class Visualizer():
         links = []
 
         for label, image_numpy in visuals.items():
+            # Save np
+            np_name = '%s_%s.npy' % (name, label)
+            numpy.save(np_name, image_numpy)
+            
             # Save one tiff
             image_name = '%s_%s.tiff' % (name, label)
             save_path = os.path.join(image_dir, image_name)

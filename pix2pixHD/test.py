@@ -25,6 +25,8 @@ def main():
     opt.resize_or_crop = 'none'
     opt.label_nc = 0
     opt.no_instance = True    
+    opt.input_nc = 1
+    opt.output_nc = 1
     opt.timbrer = True
     
     opt.use_encoded_image = True # Adds GT to test set
@@ -76,11 +78,6 @@ def main():
         import numpy as np
         def tensor_to_img(t):
             data = np.maximum(0.0, t.cpu().float().numpy())
-            
-            ## Convert rgb to grayscale
-            #if len(data.shape) == 3:
-            #    data = np.mean(data, axis=0)
-            
             return data
 
         visuals = OrderedDict([

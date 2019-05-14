@@ -23,6 +23,7 @@ class NumpyDataset(BaseDataset):
 
         indices = list(range(self.archive_A.shape[0]))
 
+        # Remove archive memmaps for pickling (when forking)
         self.archive_A = None
         self.archive_B = None
         
@@ -49,8 +50,8 @@ class NumpyDataset(BaseDataset):
         A_data = np.expand_dims(self.archive_A[self.indices[index]], axis=0)
         B_data = np.expand_dims(self.archive_B[self.indices[index]], axis=0)
 
-        A_tensor = torch.from_numpy(A_data).repeat(3, 1, 1)
-        B_tensor = torch.from_numpy(B_data).repeat(3, 1, 1)
+        A_tensor = torch.from_numpy(A_data)
+        B_tensor = torch.from_numpy(B_data)
 
         inst_tensor = feat_tensor = 0                    
 
