@@ -1,5 +1,6 @@
 ### Copyright (C) 2017 NVIDIA Corporation. All rights reserved.
 ### Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode).
+### Modified by Erik Härkönen, 2019
 import numpy as np
 import os
 import ntpath
@@ -123,9 +124,18 @@ class Visualizer():
         links = []
 
         for label, image_numpy in visuals.items():
+            # Save one tiff
+            image_name = '%s_%s.tiff' % (name, label)
+            save_path = os.path.join(image_dir, image_name)
+            tiff_data = np.mean(image_numpy, axis=0) if len(image_numpy.shape) == 3 else image_numpy
+            util.save_image(tiff_data, save_path)
+
+            # And one jpg (for viewer)
             image_name = '%s_%s.jpg' % (name, label)
             save_path = os.path.join(image_dir, image_name)
-            util.save_image(image_numpy, save_path)
+            data = ((image_numpy / (1 + image_numpy)) * 255).astype(np.uint8)
+            data = np.transpose(data, (1, 2, 0))
+            util.save_image(data, save_path)
 
             ims.append(image_name)
             txts.append(label)

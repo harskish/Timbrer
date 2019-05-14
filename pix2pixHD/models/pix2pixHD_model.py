@@ -1,5 +1,6 @@
 ### Copyright (C) 2017 NVIDIA Corporation. All rights reserved. 
 ### Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode).
+### Modified by Erik Härkönen, 2019
 import numpy as np
 import torch
 import os
@@ -163,6 +164,8 @@ class Pix2PixHDModel(BaseModel):
         else:
             input_concat = input_label
         fake_image = self.netG.forward(input_concat)
+
+        #print('Fake image in [{:.2f}, {:.2f}]'.format(fake_image.min(), fake_image.max()))
 
         # Fake Detection and Loss
         pred_fake_pool = self.discriminate(input_label, fake_image, use_pool=True)

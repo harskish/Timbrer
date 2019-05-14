@@ -1,5 +1,6 @@
 ### Copyright (C) 2017 NVIDIA Corporation. All rights reserved. 
 ### Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode).
+### Modified by Erik Härkönen, 2019
 import torch
 import torch.nn as nn
 import functools
@@ -159,7 +160,8 @@ class LocalEnhancer(nn.Module):
 
             ### final convolution
             if n == n_local_enhancers:                
-                model_upsample += [nn.ReflectionPad2d(3), nn.Conv2d(ngf, output_nc, kernel_size=7, padding=0), nn.Tanh()]                       
+                print('Removing GEN final tanh!')
+                model_upsample += [nn.ReflectionPad2d(3), nn.Conv2d(ngf, output_nc, kernel_size=7, padding=0)] #, nn.Tanh()
             
             setattr(self, 'model'+str(n)+'_1', nn.Sequential(*model_downsample))
             setattr(self, 'model'+str(n)+'_2', nn.Sequential(*model_upsample))                  
@@ -206,7 +208,9 @@ class GlobalGenerator(nn.Module):
             mult = 2**(n_downsampling - i)
             model += [nn.ConvTranspose2d(ngf * mult, int(ngf * mult / 2), kernel_size=3, stride=2, padding=1, output_padding=1),
                        norm_layer(int(ngf * mult / 2)), activation]
-        model += [nn.ReflectionPad2d(3), nn.Conv2d(ngf, output_nc, kernel_size=7, padding=0), nn.Tanh()]        
+        
+        print('Made final tanh a leaky relu!')
+        model += [nn.ReflectionPad2d(3), nn.Conv2d(ngf, output_nc, kernel_size=7, padding=0), nn.LeakyReLU()] #, nn.Tanh()
         self.model = nn.Sequential(*model)
             
     def forward(self, input):

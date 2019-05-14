@@ -1,5 +1,6 @@
 ### Copyright (C) 2017 NVIDIA Corporation. All rights reserved. 
 ### Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode).
+### Modified by Erik Härkönen, 2019
 import os.path
 from data.base_dataset import BaseDataset, get_params, get_transform, normalize
 from data.image_folder import make_dataset
@@ -39,7 +40,12 @@ class AlignedDataset(BaseDataset):
         A_path = self.A_paths[index]              
         A = Image.open(A_path)        
         params = get_params(self.opt, A.size)
-        if self.opt.label_nc == 0:
+        
+        # TEST
+        if self.opt.timbrer:
+            transform_A = get_transform(self.opt, params, method=Image.NEAREST, normalize=False)
+            A_tensor = transform_A(A).repeat(3, 1, 1) # make rgb
+        elif self.opt.label_nc == 0:
             transform_A = get_transform(self.opt, params)
             A_tensor = transform_A(A.convert('RGB'))
         else:
@@ -50,9 +56,15 @@ class AlignedDataset(BaseDataset):
         ### input B (real images)
         if self.opt.isTrain or self.opt.use_encoded_image:
             B_path = self.B_paths[index]   
-            B = Image.open(B_path).convert('RGB')
-            transform_B = get_transform(self.opt, params)      
-            B_tensor = transform_B(B)
+            
+            if self.opt.timbrer:
+                B = Image.open(B_path)
+                transform_B = get_transform(self.opt, params, method=Image.NEAREST, normalize=False)
+                B_tensor = transform_B(B).repeat(3, 1, 1) # make rgb
+            else:
+                B = Image.open(B_path).convert('RGB')
+                transform_B = get_transform(self.opt, params)      
+                B_tensor = transform_B(B)
 
         ### if using instance maps        
         if not self.opt.no_instance:
