@@ -18,10 +18,10 @@ import tensorflow as tf
 import librosa as lr
 import sounddevice as sd
 import numpy as np
+from pathlib import Path
+import sys
 
 def sonify(spectrogram, samples, transform_op_fn, logscaled=True):
-    use_adam = False
-    
     graph = tf.Graph()
     with graph.as_default():
 
@@ -39,43 +39,27 @@ def sonify(spectrogram, samples, transform_op_fn, logscaled=True):
         #y = tf.nn.l2_normalize(y)
 
         loss = tf.losses.mean_squared_error(x, y)
-
-        if use_adam:
-            optimizer = tf.train.AdamOptimizer(learning_rate=0.005)
-            minimize_op = optimizer.minimize(loss, var_list=[noise])
-        else:
-            optimizer = tf.contrib.opt.ScipyOptimizerInterface(
-                loss=loss,
-                var_list=[noise],
-                tol=1e-16,
-                method='L-BFGS-B',
-                options={
-                    'maxiter': 1000,
-                    'disp': True
-                })
+        optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
+        minimize_op = optimizer.minimize(loss, var_list=[noise])
 
     with tf.Session(graph=graph) as session:
         session.run(tf.global_variables_initializer())
         
-        if use_adam:
-            for i in range(3000):
-                _, loss_val = session.run([minimize_op, loss])
-                print('Iteration {}: loss = {:.3e}'.format(i + 1, loss_val))
-        else:
-            optimizer.minimize(session)
+        for i in range(5000):
+            _, loss_val = session.run([minimize_op, loss])
+            print('Iteration {}: loss = {:.3e}'.format(i + 1, loss_val))
         
         print('Final loss:', loss.eval())
         waveform = session.run(noise)
 
     return waveform
 
-
+# Parameters of data set
 sample_rate = 44100
-duration = 5.0
+duration = 6.0
 num_samples = int(sample_rate*duration)
-waveform, sr = lr.load('test_out.wav', sr=sample_rate, duration=duration)
-assert len(waveform) == num_samples and sample_rate == sr
 
+# waveform to mel-scaled stft
 def logmel(waveform):
     z = tf.contrib.signal.stft(waveform, frame_length=2048, frame_step=1024)
     magnitudes = tf.abs(z)
@@ -86,17 +70,16 @@ def logmel(waveform):
         lower_edge_hertz=0.0,
         upper_edge_hertz=0.5*sample_rate) #8k
     melspectrogram = tf.tensordot(magnitudes, filterbank, 1)
-    return tf.log1p(melspectrogram)
+    return tf.log1p(melspectrogram)[:256, :256]
 
+for p in sys.argv[1:]:
+    print('Processing', p)
+    in_path = Path(p)
 
-with tf.Session():
-    spectrogram_input = logmel(waveform).eval()
-    np.save('test_mel_spectrogram.npy', spectrogram_input)
+    spectrogram = np.load(str(in_path)) # restore from disk
+    reconstructed_waveform = sonify(spectrogram[0], num_samples, logmel)
 
-spectrogram = np.load('test_mel_spectrogram.npy') # restore from disk
-print('Mel spectrogram shape:', spectrogram.shape)
-reconstructed_waveform = sonify(spectrogram, num_samples, logmel)
-
-sd.play(reconstructed_waveform, sample_rate, blocking=True)
+    sd.play(reconstructed_waveform, sample_rate, blocking=True)
+    lr.output.write_wav(str(in_path.with_suffix('.wav')), reconstructed_waveform, sample_rate, norm=False)
 
 print('Done')
