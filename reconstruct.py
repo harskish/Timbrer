@@ -79,7 +79,7 @@ for p in sys.argv[1:]:
     spectrogram = np.load(str(in_path)) # restore from disk
     reconstructed_waveform = sonify(spectrogram[0], num_samples, logmel)
 
-    sd.play(reconstructed_waveform, sample_rate, blocking=True)
+    #sd.play(reconstructed_waveform, sample_rate, blocking=True)
     lr.output.write_wav(str(in_path.with_suffix('.wav')), reconstructed_waveform, sample_rate, norm=False)
 
 print('Done')

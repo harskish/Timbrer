@@ -55,8 +55,9 @@ class NumpyDataset(BaseDataset):
 
         inst_tensor = feat_tensor = 0                    
 
+        res_path = 'timbrer_{}_{}'.format('train' if self.opt.isTrain else 'test', index)
         input_dict = {'label': A_tensor, 'inst': inst_tensor, 'image': B_tensor, 
-                      'feat': feat_tensor, 'path': 'DONT_READ_FROM_ME'}
+                      'feat': feat_tensor, 'path': res_path}
 
         return input_dict
 
