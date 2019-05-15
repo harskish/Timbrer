@@ -5,7 +5,8 @@
 import librosa
 import librosa.display
 import matplotlib.pyplot as plt
-import sounddevice as sd  # Windows: must install with pip (not conda)
+import sounddevice as sd  # conda version only supports python 3.6
+from sf2utils.sf2parse import Sf2File # pip install sf2utils
 import numpy as np
 import subprocess
 from pathlib import Path
@@ -53,7 +54,7 @@ if not os.path.isdir(setDir):
 
 
 # Create a temporary config file pointing to the correct soundfont
-def select_midi_soundfont(name):
+def select_midi_soundfont(name, instrument=''):
     matches = sorted(Path('./data/soundfont/').glob('**/' + name))
     if len(matches) == 0:
         raise Exception('Could not find soundfont: ' + name)
@@ -61,9 +62,20 @@ def select_midi_soundfont(name):
         print('Multiple matching soundfonts:', matches)
         print('Using first match')
     fontpath = matches[0]
+
+    with open(fontpath.resolve(), 'rb') as sf2_file:
+        sf2 = Sf2File(sf2_file)
+        preset_num = sf2.presets[0].preset
+        for preset in sf2.presets:
+            if preset.name.lower() == instrument.lower():
+                preset_num = preset.preset
+            if preset.name != 'EOP':
+                print('Preset {}: {}'.format(preset.preset, preset.name))
+        print('Using preset', preset_num)
+    
     cfgpath = fontpath.with_suffix('.cfg')
     with open(cfgpath, 'w') as f:
-        config = "dir {}\nsoundfont \"{}\" amp=100%".format(fontpath.parent.resolve(), name)
+        config = "dir {}\nbank 0\n0 %font \"{}\" 0 {} amp=100".format(fontpath.parent.resolve(), name, preset_num)
         f.write(config)
     return cfgpath
 
