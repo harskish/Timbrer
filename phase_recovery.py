@@ -17,10 +17,11 @@
 import tensorflow as tf
 import librosa as lr
 import sounddevice as sd
+import matplotlib.pyplot as plt
 import numpy as np
 
 def sonify(spectrogram, samples, transform_op_fn, logscaled=True):
-    use_adam = False
+    use_adam = True
     
     graph = tf.Graph()
     with graph.as_default():
@@ -41,7 +42,7 @@ def sonify(spectrogram, samples, transform_op_fn, logscaled=True):
         loss = tf.losses.mean_squared_error(x, y)
 
         if use_adam:
-            optimizer = tf.train.AdamOptimizer(learning_rate=0.005)
+            optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
             minimize_op = optimizer.minimize(loss, var_list=[noise])
         else:
             optimizer = tf.contrib.opt.ScipyOptimizerInterface(
@@ -58,7 +59,7 @@ def sonify(spectrogram, samples, transform_op_fn, logscaled=True):
         session.run(tf.global_variables_initializer())
         
         if use_adam:
-            for i in range(3000):
+            for i in range(5000):
                 _, loss_val = session.run([minimize_op, loss])
                 print('Iteration {}: loss = {:.3e}'.format(i + 1, loss_val))
         else:
@@ -77,10 +78,10 @@ waveform, sr = lr.load('test_out.wav', sr=sample_rate, duration=duration)
 assert len(waveform) == num_samples and sample_rate == sr
 
 def logmel(waveform):
-    z = tf.contrib.signal.stft(waveform, frame_length=2048, frame_step=1024)
+    z = tf.contrib.signal.stft(waveform, frame_length=8192*2, frame_step=1024)
     magnitudes = tf.abs(z)
     filterbank = tf.contrib.signal.linear_to_mel_weight_matrix(
-        num_mel_bins=256, #80
+        num_mel_bins=1024, #80
         num_spectrogram_bins=magnitudes.shape[-1].value,
         sample_rate=sample_rate,
         lower_edge_hertz=0.0,
@@ -94,6 +95,10 @@ with tf.Session():
     np.save('test_mel_spectrogram.npy', spectrogram_input)
 
 spectrogram = np.load('test_mel_spectrogram.npy') # restore from disk
+
+plt.imshow(spectrogram)
+plt.show()
+
 print('Mel spectrogram shape:', spectrogram.shape)
 reconstructed_waveform = sonify(spectrogram, num_samples, logmel)
 

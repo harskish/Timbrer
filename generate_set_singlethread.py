@@ -17,6 +17,7 @@ import shutil
 import random
 import threading
 import time
+from mido import MidiFile
 
 from concurrent.futures import ThreadPoolExecutor
 
@@ -54,7 +55,7 @@ if not os.path.isdir(setDir):
 
 
 # Create a temporary config file pointing to the correct soundfont
-def select_midi_soundfont(name, instrument=''):
+def select_midi_soundfont(name, instrument='default'):
     matches = sorted(Path('./data/soundfont/').glob('**/' + name))
     if len(matches) == 0:
         raise Exception('Could not find soundfont: ' + name)
@@ -69,11 +70,11 @@ def select_midi_soundfont(name, instrument=''):
         for preset in sf2.presets:
             if preset.name.lower() == instrument.lower():
                 preset_num = preset.preset
-            if preset.name != 'EOP':
-                print('Preset {}: {}'.format(preset.preset, preset.name))
+            #if preset.name != 'EOP':
+            #    print('Preset {}: {}'.format(preset.preset, preset.name))
         print('Using preset', preset_num)
     
-    cfgpath = fontpath.with_suffix('.cfg')
+    cfgpath = fontpath.with_suffix('.'+instrument+'.cfg')
     with open(cfgpath, 'w') as f:
         config = "dir {}\nbank 0\n0 %font \"{}\" 0 {} amp=100".format(fontpath.parent.resolve(), name, preset_num)
         f.write(config)
@@ -82,7 +83,7 @@ def select_midi_soundfont(name, instrument=''):
 def midi2wav(file, outpath, cfg):
     cmds = [
         SYNTH_BIN, '-c', str(cfg), str(file),
-        '-Od', '--reverb=d' '--noise-shaping=4',
+        '-Od', '--reverb=g,25' '--noise-shaping=4', '--adjust-tempo=100'
         '-EwpvseToz', '-f', '-A100', '-Ow',
         '-o', str(outpath)
     ]
@@ -96,16 +97,17 @@ num_samples = int(sample_rate*duration)
 
 # waveform to mel-scaled stft
 def logmel(waveform):
-    z = tf.contrib.signal.stft(waveform, frame_length=2048, frame_step=1024)
+    z = tf.contrib.signal.stft(waveform, frame_length=4096, frame_step=500)
+    print('shape of z:', z.shape)
     magnitudes = tf.abs(z)
     filterbank = tf.contrib.signal.linear_to_mel_weight_matrix(
-        num_mel_bins=1024, #80
+        num_mel_bins=512, #80
         num_spectrogram_bins=magnitudes.shape[-1].value,
         sample_rate=sample_rate,
         lower_edge_hertz=0.0,
         upper_edge_hertz=0.5*sample_rate) #8k
     melspectrogram = tf.tensordot(magnitudes, filterbank, 1)
-    return tf.log1p(melspectrogram)[:256, :1024]
+    return tf.log1p(melspectrogram)[:512, :512]
 
 # suppress tf output
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
@@ -120,8 +122,12 @@ block_size = 20 # how many extracts taken from each track
 
 # render matching audio for each of these soundfonts
 instruments = {
-    'piano': 'grand-piano-YDP-20160804.sf2',
-    'guitar': 'spanish-classical-guitar.sf2'
+    #'piano': ('grand-piano-YDP-20160804.sf2', ''),
+    #'flute': ('Milton_Pan_flute.sf2', ''),
+    #'guitar': ('spanish-classical-guitar.sf2', ''),
+    'harp' : ('Roland_SC-88.sf2', 'Harp'),
+    'kalimba' : ('Roland_SC-88.sf2', 'Kalimba'),
+    #'pan' : ('Roland_SC-88.sf2', 'Pan flute')
 }
 with tf.Session() as sess:
 
@@ -137,8 +143,8 @@ with tf.Session() as sess:
             print(str(dataFile), 'already exists!')
             #continue
         else:
-            np.save(str(dataFile), np.zeros((spectrogram_count, 256,1024), dtype='float32'))
-        cfgs.append(select_midi_soundfont(instruments[instrument]))
+            np.save(str(dataFile), np.zeros((spectrogram_count, 512,512), dtype='float32'))
+        cfgs.append(select_midi_soundfont(*instruments[instrument]))
     
     if len(cfgs) == len(instruments):
         # render the given midi file with the given instruments, generate spectrograms and save
@@ -147,6 +153,7 @@ with tf.Session() as sess:
             min_len = None
             # render the waveform files
             for (j, instrument) in enumerate(instruments):
+                print(instrument, '...')
                 # synthesize midi with timidity++, obtain waveform
                 file = Path(f).with_suffix('.'+instrument+'.wav')
                 if midi2wav(f, file, cfgs[j])!=0:
@@ -156,19 +163,21 @@ with tf.Session() as sess:
                 cur_len = len(librosa.load(str(file), sr = sample_rate)[0])
                 if j==0 or cur_len<min_len:
                     min_len = cur_len
-                # assert sr == sample_rate
             
+            mid_len = int(np.floor(MidiFile(f).length*sample_rate))
+            # print('mid: ', mid_len, ' wav: ', min_len)
+
             # turn waveforms into sets of spectrograms
             for instrument in instruments:
                 # open waveform and result file
                 waveform, _ = librosa.load(str(Path(f).with_suffix('.'+instrument+'.wav')), sr = sample_rate)
                 fp = np.load(Path('data/spectrogram/maestro_'+instrument+'.npy'), mmap_mode='r+')
                 # process extracts of the waveform at uniform intervals
-                for (j, start) in enumerate(np.linspace(0, min_len-num_samples-1, num=block_size)):
+                for (j, start) in enumerate(np.linspace(0, mid_len-num_samples-1, num=block_size)):
                     layer = i*block_size+j
                     if layer>=spectrogram_count:
                         break
-                    start = min(int(start), min_len-num_samples-1)
+                    start = min(int(start), mid_len-num_samples-1)
                     # output the spectrogram
                     fp[layer,:,:] = sess.run(output, feed_dict={waveform_data:waveform[start:start+num_samples]})
                     # print progress

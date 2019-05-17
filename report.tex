@@ -1,0 +1,76 @@
+\title{Timbrer: Learning musical timbre transfer in the frequency domain}
+\author{
+        Pauli Kemppinen \\
+            \and
+        Erik Härkönen
+}
+\date{\today}
+
+\documentclass[12pt]{article}
+
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+We treat the problem of musical timbre transfer between fixed pairs of instruments; we take as input a recording of an instrument playing a melody, and generate a corresponding recording that sounds like the same melody played by a (different) target instrument. We do this by mapping the input signal to a Mel-scaled short-time Fourier amplitude spectrogram and employing the well-known pix2pix \cite{pix2pix} neural network to generate an output spectrogram. To get the final generated audio, we optimize the output waveform directly such that it generates the desired output spectrogram \cite{spectrogram_inv}.
+\end{abstract}
+
+\section{Introduction}
+Timbre is a somewhat elusive term that describes \textit{what an instrument sounds like}. It is independent of the note played; it is not difficult to tell the sound of a violin and a piano apart even if we play the same note -- with equivalent loudness, pitch and duration. However, note that the timbre is not independent of these variables. For the middle part of a very long constant note we could do the analysis with a simple Fourier transform since it's essentially a ``steady-state'' sound, but in practice the temporal component of the sound is perceptually quite important. For example, think of a bow or pluck hitting a string, or how a piano damps the sound after the corresponding key is lifted.
+
+Our interest is the transfer of timbre; our goal is to come up with a model that can transform an audio clip of an instrument playing a melody to a corresponding audio clip that perceptually appears to be the same melody played by a different instrument. The instruments and their order (which of them is input and which is output) are fixed before the process.
+
+\subsection{Related work}
+The most notable previous work on the subject of timbre transfer is the TimbreTron system of Huang et al. \cite{timbretron}. The main difference in our problem setting to theirs is that we assume that exact temporally matched pairs; we require paired recordings of the instrument pair playing the same melodies. Therefore we don't need to use a CycleGAN \cite{CycleGAN}, but can employ a more direct optimization loss.
+
+\begin{figure}
+\centering
+\includegraphics[width=\textwidth]{pix2pix}
+\caption{The adversarial training of pix2pix: the discriminator $D$ is shown pairs that contain a real input $x$, and either a generated output $G(x)$ or a real output $y$.} \label{fig:pix2pix}
+\end{figure}
+
+Our method employs  pix2pixHD \cite{pix2pixHD}, a multiscale extension of the pix2pix \cite{pix2pix} network, with minor modifications. The original pix2pix is a conditional adversarial network designed for image to image translation tasks -- it is effectively an autoencoder (with skip connections) that is trained with an adversarial loss, cf. Figure \ref{fig:pix2pix}.
+
+\begin{figure}
+\centering
+\includegraphics[width=\textwidth]{inversion}
+\caption{The spectrogram inversion process; beginning from a coarse initial guess $S_0$ (e.g. white noise), the signal is optimized iteratively to come up with $S_i$ so that the spectrogram $E_{S_i}$ matches the target spectrogram $T$.} \label{fig:spectrogram_inv}
+\end{figure}
+
+We also use the spectrogram inversion method of Rémi et al. \cite{spectrogram_inv} to come up with the inversion of the spectrogram; we only generate the amplitude spectrogram with the network, so the inverse is not well-defined in the traditional sense. The inversion is a simple numeric optimization process; the optimization variable is the waveform, and the target function is the distance between the spectrogram of the waveform and the target spectrogram, cf. Figure \ref{fig:spectrogram_inv}. We use Adam to perform this optimization.
+
+\subsection{Data}
+The dataset we use is Maestro \cite{maestro}, a large set of MIDI files that contain the notes for a set of classical music pieces. Additional data is contained in the so-called sound fonts used by the MIDI synthesizer, that describe how each instrument sounds, basically by storing a set of waveforms that correspond to different notes. These are not only based on the pitch to play, but on the note velocity as well -- this corresponds to, for example, how hard a key on a piano is pressed.
+
+\section{The proposed method}
+Our method is a combination of tweaked existing parts. The deep learning part of our method is the pix2pixHD network that has been modified from an inverse segmentation model to a single-channel image to image HDR translator (i.e. it can generate values over one).
+
+The autoencoder part of the network has five 2D convolution layers where each doubles the number of channels, each with instance normalization and \texttt{ReLU} after them, nine Resnet blocks with kernel sizes 3 by 3, and then corresponding five transpose 2D convolution kernels where each halves the number of channels (there's also a batch normalization and \texttt{ReLU} after each). The largest-resolution convolutions (the first normal and the last transpose) have kernel size 7 by 7 and stride 1, the rest have kernel size 3 by 3 and stride 2.
+
+The discriminator part of the network (only used during training) is multiscale; both scales have 5 layers of 2D convolution, batch normalization and LeakyReLU. The first layer of both scales omits the batch normalization, and the last layer of both scales is only a convolution. All kernels are size 4 by 4 and have padding 2 by 2, the three first for both scales have stride 2 and the last two have stride 1. Both scales increase the number of channels as $[2\rightarrow 64;64\rightarrow 128;128\rightarrow 256;256\rightarrow 512;512\rightarrow 1]$. The last convolution of the second scale is followed by an average pool of size 3 by 3 and stride 2.
+
+The rest of the method are the forward and inverse waveform to spectrogram transformations. Before every convolution (and transpose convolution), a reflection pad is used to grow the image so its shape is the same after the convolution.
+
+\subsection{Implementation}
+The code is available at \url{https://github.com/harskish/Timbrer}. The data generation script \texttt{generate\_set\_singlethread.py} downloads the Maestro dataset, synthesizes wave files and generates spectrograms from these as numpy arrays. The training script \texttt{pix2pixHD/train.py} optimizes the model based on these. Finally, \texttt{mikä} computes the spectrogram of a given audio clip, infers the corresponding spectrogram and inverts it to an output waveform.
+
+The pix2pixHD network implementation is mostly taken directly from the authors (at \url{https://github.com/NVIDIA/pix2pixHD}). The final activation of the network was changed from a \texttt{tanh} to a \texttt{LeakyReLU} (LeakyReLU$(x) = max(0,x)-.01max(0,-x)$) to permit generation of arbitrary values (most importantly, larger than one). Furthermore, the data loader was changed, the number of channels was modified, and the VGG loss was made to work with a single-channel input.
+
+Likewise, the spectrogram inversion is a rather direct application of the code given by the author, available at\\ \url{https://gist.github.com/carlthome/a4a8bf0f587da738c459d0d5a55695cd}. We changed the optimizer to Adam and tweaked the parameters of both the short-time Fourier transform and the Mel-scaling.
+
+\section{Results}
+The most interesting results here are naturally the generated audio clips; please listen to the files in \texttt{hakemisto} to evaluate the results perceptually. Each audio file contains first the input and then the output, with a small pause in between. The examples labeled \texttt{X} are generated from synthesized input, the ones labeled \texttt{Y} for real input, and the ones labeled \texttt{Z} are for real input and additionally contain the result of TimbreTron after our result.
+
+
+
+\section{Conclusion}
+In the end, the method worked almost surprisingly well and didn't require much tweaking -- most of the interesting parameters lie in the spectrogram inversion. The largest portion of the workload was designing the approach, setting up the data pipeline and initially testing each individual component.
+
+It is clear that our problem is relatively simple; we can generate an arbitrary number of exactly temporally matching input-output pairs. We only have synthetic data though, which limits the natural variation in timbre and doesn't match the noise profile of an actual recording. This makes the generalization of the method somewhat uncertain -- due to time limits we unfortunately don't have a very extensive evaluation of this.
+
+\bibliographystyle{abbrv}
+\bibliography{references}
+
+\end{document}
