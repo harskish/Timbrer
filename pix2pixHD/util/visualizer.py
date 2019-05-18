@@ -133,19 +133,15 @@ class Visualizer():
         for label, image_numpy in visuals.items():
             # Save np
             np_name = '%s_%s.npy' % (name, label)
-            numpy.save(np_name, image_numpy)
-            
-            # Save one tiff
-            image_name = '%s_%s.tiff' % (name, label)
-            save_path = os.path.join(image_dir, image_name)
-            tiff_data = np.mean(image_numpy, axis=0) if len(image_numpy.shape) == 3 else image_numpy
-            util.save_image(tiff_data, save_path)
+            save_path = os.path.join(image_dir, np_name)
+            np.save(save_path, image_numpy)
 
             # And one jpg (for viewer)
             image_name = '%s_%s.jpg' % (name, label)
             save_path = os.path.join(image_dir, image_name)
             data = ((image_numpy / (1 + image_numpy)) * 255).astype(np.uint8)
             data = np.transpose(data, (1, 2, 0))
+            data = np.repeat(data, 3, axis=-1)
             util.save_image(data, save_path)
 
             ims.append(image_name)

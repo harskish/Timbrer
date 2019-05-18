@@ -28,6 +28,8 @@ def main():
     opt.input_nc = 1
     opt.output_nc = 1
     opt.timbrer = True
+    opt.how_many = 100 # how many results to generate
+    opt.which_epoch = 'harp_kalimba'
     
     opt.use_encoded_image = True # Adds GT to test set
     opt.use_features = False     # makes sure they aren't used in inference
@@ -81,10 +83,10 @@ def main():
             return data
 
         visuals = OrderedDict([
-            ('input_label', tensor_to_img(data['label'][0])),
+            ('input', tensor_to_img(data['label'][0])),
             #('synthesized_image', util.tensor2im(generated.data[0])),
-            ('synthesized_image', tensor_to_img(generated.data[0])),
-            ('ground truth', tensor_to_img(data['image'][0]))
+            ('output', tensor_to_img(generated.data[0])),
+            ('reference', tensor_to_img(data['image'][0]))
         ])
         img_path = data['path']
         print('process image... %s' % img_path)
