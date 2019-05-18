@@ -15,6 +15,7 @@
 # Modified by Erik Härkönen
 
 import tensorflow as tf
+import tensorflow_probability as tfp
 import librosa as lr
 import sounddevice as sd
 import matplotlib.pyplot as plt
@@ -22,46 +23,23 @@ import numpy as np
 from pathlib import Path
 import sys
 
-def sonify(spectrogram, samples, transform_op_fn, logscaled=True):
-    graph = tf.Graph()
-    with graph.as_default():
-
-        noise = tf.Variable(tf.random_normal([samples], stddev=1e-6))
-
-        x = transform_op_fn(noise)
-        y = spectrogram
-
-        if logscaled:
-            x = tf.expm1(x)
-            y = tf.expm1(y)
-
-        loss = tf.losses.mean_squared_error(x, y)
-
-        global_step = tf.Variable(0, trainable=False)
-        start_learning_rate = 0.1
-        opt_steps = 5000
-        num_decays = 70
-        learning_rate = tf.train.exponential_decay(start_learning_rate, global_step, decay_steps=opt_steps//num_decays, decay_rate=0.96, staircase=False)
-
-        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
-        minimize_op = optimizer.minimize(loss, var_list=[noise], global_step=global_step)
-
-    with tf.Session(graph=graph) as session:
-        session.run(tf.global_variables_initializer())
-        
-        for i in range(opt_steps):
-            _, loss_val = session.run([minimize_op, loss])
-            print('Iteration {}: loss = {:.3e}'.format(i + 1, loss_val))
-        
-        print('Final loss:', loss.eval())
-        waveform = session.run(noise)
-
-    return waveform
-
 # Parameters of data set
 sample_rate = 44100
 duration = 6.0
 num_samples = int(sample_rate*duration)
+target_shape = (512, 512)
+
+# Target spectrogram
+target_spectrogram = tf.Variable(np.zeros(target_shape), dtype=tf.float32, trainable=False)
+target_assign_placeholder = tf.placeholder(tf.float32, shape=target_shape)
+target_assign_op = tf.assign(target_spectrogram, target_assign_placeholder)
+
+# Initial noise
+noise = tf.Variable(np.zeros([num_samples]), dtype=tf.float32)
+noise_assign_placeholder = tf.placeholder(tf.float32, shape=[num_samples])
+noise_assign_op = tf.assign(noise, noise_assign_placeholder)
+
+use_scipy = True
 
 # waveform to mel-scaled stft
 def logmel(waveform):
@@ -74,14 +52,63 @@ def logmel(waveform):
         lower_edge_hertz=0.0,
         upper_edge_hertz=0.5*sample_rate) #8k
     melspectrogram = tf.tensordot(magnitudes, filterbank, 1)
-    return tf.log1p(melspectrogram)[:512, :512]
+    return tf.log1p(melspectrogram)[:target_shape[0], :target_shape[1]]
+
+def evaluate(input_tensor):
+    x = logmel(input_tensor)
+    y = target_spectrogram
+
+    x = tf.expm1(x)
+    y = tf.expm1(y)
+
+    loss = tf.losses.mean_squared_error(x, y)
+    return loss, tf.gradients(loss, input_tensor)[0]
+
+if use_scipy:
+    loss = evaluate(noise)[0]
+    optimizer = tf.contrib.opt.ScipyOptimizerInterface(
+        loss=loss,
+        var_list=[noise],
+        tol=1e-16,
+        method='L-BFGS-B',
+        options={ 'maxiter': 1000, 'disp': False }
+    )
+else:
+    retval = tfp.optimizer.lbfgs_minimize(
+        evaluate,
+        noise,
+        num_correction_pairs=10,
+        tolerance=1e-08,
+        max_iterations=500
+    )
+
+sess = tf.InteractiveSession()
+sess.run(tf.global_variables_initializer())
 
 for p in sys.argv[1:]:
     print('Processing', p)
     in_path = Path(p)
 
-    spectrogram = np.load(str(in_path)) # restore from disk
-    reconstructed_waveform = sonify(spectrogram[0], num_samples, logmel)
+    spectrogram = np.load(str(in_path))[0]
+    initial_noise = np.random.normal(scale=1e-6, size=[num_samples])
+
+    # Assign spectrogram and noise
+    sess.run(target_assign_op, feed_dict={ target_assign_placeholder: spectrogram })
+    sess.run(noise_assign_op, feed_dict={ noise_assign_placeholder: initial_noise })
+
+    import time
+    ts = time.time()
+    
+    if use_scipy:
+        optimizer.minimize(sess)
+        print('Final loss: {:.2e}'.format(loss.eval()))
+        reconstructed_waveform = sess.run(noise)
+    else:
+        res = sess.run(retval)
+        print('Final loss: {:.2e}'.format(res.objective_value))
+        reconstructed_waveform = res.position
+
+    print('Done in', time.time() - ts, 'seconds')
 
     #sd.play(reconstructed_waveform, sample_rate, blocking=True)
     lr.output.write_wav(str(in_path.with_suffix('.wav')), reconstructed_waveform, sample_rate, norm=False)
