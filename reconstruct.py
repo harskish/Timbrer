@@ -89,7 +89,11 @@ for p in sys.argv[1:]:
     print('Processing', p)
     in_path = Path(p)
 
-    spectrogram = np.load(str(in_path))[0]
+    spectrogram = np.load(str(in_path))
+    if spectrogram.shape[0] == 1:
+        spectrogram = spectrogram[0]
+    assert spectrogram.shape == target_shape, 'Wrong STFT shape.'
+
     initial_noise = np.random.normal(scale=1e-6, size=[num_samples])
 
     # Assign spectrogram and noise

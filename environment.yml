@@ -11,8 +11,10 @@ dependencies:
   - cudatoolkit=10.0
   - python-sounddevice
   - tensorflow
-  -pip:
-	- sf2utils
-	- mido
+  - tensorflow-probability
+  - pip:
+    - sf2utils
+    - mido
+
 # conda env update -f environment.yml --prune
 
