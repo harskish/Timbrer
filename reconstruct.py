@@ -27,23 +27,23 @@ import sys
 sample_rate = 44100
 duration = 6.0
 num_samples = int(sample_rate*duration)
-target_shape = (512, 512)
+batch = 30
+target_shape = (1, 512, 512)
+batch_shape = (batch, target_shape[1], target_shape[2])
 
 # Target spectrogram
-target_spectrogram = tf.Variable(np.zeros(target_shape), dtype=tf.float32, trainable=False)
-target_assign_placeholder = tf.placeholder(tf.float32, shape=target_shape)
+target_spectrogram = tf.Variable(np.zeros(batch_shape), dtype=tf.float32, trainable=False)
+target_assign_placeholder = tf.placeholder(tf.float32, shape=batch_shape)
 target_assign_op = tf.assign(target_spectrogram, target_assign_placeholder)
 
 # Initial noise
-noise = tf.Variable(np.zeros([num_samples]), dtype=tf.float32)
-noise_assign_placeholder = tf.placeholder(tf.float32, shape=[num_samples])
+noise = tf.Variable(np.zeros([batch * num_samples]), dtype=tf.float32)
+noise_assign_placeholder = tf.placeholder(tf.float32, shape=[batch * num_samples])
 noise_assign_op = tf.assign(noise, noise_assign_placeholder)
-
-use_scipy = True
 
 # waveform to mel-scaled stft
 def logmel(waveform):
-    z = tf.contrib.signal.stft(waveform, frame_length=4096, frame_step=500)
+    z = tf.contrib.signal.stft(waveform, frame_length=2*2048, frame_step=500)
     magnitudes = tf.abs(z)
     filterbank = tf.contrib.signal.linear_to_mel_weight_matrix(
         num_mel_bins=512, #80
@@ -52,18 +52,20 @@ def logmel(waveform):
         lower_edge_hertz=0.0,
         upper_edge_hertz=0.5*sample_rate) #8k
     melspectrogram = tf.tensordot(magnitudes, filterbank, 1)
-    return tf.log1p(melspectrogram)[:target_shape[0], :target_shape[1]]
+    return tf.log1p(melspectrogram)[:, :target_shape[1], :target_shape[2]]
 
 def evaluate(input_tensor):
-    x = logmel(input_tensor)
+    minibatch = tf.reshape(input_tensor, (batch, num_samples))
+    x = logmel(minibatch)
     y = target_spectrogram
 
     x = tf.expm1(x)
     y = tf.expm1(y)
 
     loss = tf.losses.mean_squared_error(x, y)
-    return loss, tf.gradients(loss, input_tensor)[0]
+    return (loss, *tf.gradients(loss, input_tensor))
 
+use_scipy = False
 if use_scipy:
     loss = evaluate(noise)[0]
     optimizer = tf.contrib.opt.ScipyOptimizerInterface(
@@ -71,7 +73,7 @@ if use_scipy:
         var_list=[noise],
         tol=1e-16,
         method='L-BFGS-B',
-        options={ 'maxiter': 1000, 'disp': False }
+        options={ 'maxiter': 500, 'disp': False }
     )
 else:
     retval = tfp.optimizer.lbfgs_minimize(
@@ -85,19 +87,30 @@ else:
 sess = tf.InteractiveSession()
 sess.run(tf.global_variables_initializer())
 
-for p in sys.argv[1:]:
-    print('Processing', p)
-    in_path = Path(p)
+# Pad to minibatch size
+files = sys.argv[1:]
+missing = batch - len(files) % batch
+files = files + missing * [files[-1]]
 
-    spectrogram = np.load(str(in_path))
-    if spectrogram.shape[0] == 1:
-        spectrogram = spectrogram[0]
-    assert spectrogram.shape == target_shape, 'Wrong STFT shape.'
+for f in range(0, len(files), batch):
+    print('Processing batch', f // batch, 'of', len(files) // batch)
 
-    initial_noise = np.random.normal(scale=1e-6, size=[num_samples])
+    paths = files[f:f+batch]
+
+    spectrograms = np.zeros(batch_shape, dtype=np.float32)
+    for i, p in enumerate(paths):
+        spectrogram = np.load(p)
+        if len(spectrogram.shape) == 2:
+            spectrogram = np.expand_dims(spectrogram, axis=0)
+        if spectrogram.shape != target_shape:
+            print('\nERROR: File {} is of wrong shape: got {}, expected {}.\n'.format(p, spectrogram.shape, target_shape))
+            spectrogram = np.zeros(target_shape, dtype=np.float32)
+        spectrograms[i] = spectrogram
+
+    initial_noise = np.random.normal(scale=1e-6, size=[batch * num_samples]) # tfp needs 1d
 
     # Assign spectrogram and noise
-    sess.run(target_assign_op, feed_dict={ target_assign_placeholder: spectrogram })
+    sess.run(target_assign_op, feed_dict={ target_assign_placeholder: spectrograms })
     sess.run(noise_assign_op, feed_dict={ noise_assign_placeholder: initial_noise })
 
     import time
@@ -106,15 +119,18 @@ for p in sys.argv[1:]:
     if use_scipy:
         optimizer.minimize(sess)
         print('Final loss: {:.2e}'.format(loss.eval()))
-        reconstructed_waveform = sess.run(noise)
+        reconstructed_waveforms = sess.run(noise)
     else:
         res = sess.run(retval)
         print('Final loss: {:.2e}'.format(res.objective_value))
-        reconstructed_waveform = res.position
+        reconstructed_waveforms = np.reshape(res.position, (batch, num_samples))
 
-    print('Done in', time.time() - ts, 'seconds')
+    delta = time.time() - ts
+    print('Done in {:.2f}s ({:.2f} s/img)'.format(delta, delta / batch))
 
-    #sd.play(reconstructed_waveform, sample_rate, blocking=True)
-    lr.output.write_wav(str(in_path.with_suffix('.wav')), reconstructed_waveform, sample_rate, norm=False)
+    for wf, path in zip(reconstructed_waveforms, paths):
+        #sd.play(wf, sample_rate, blocking=True)
+        out_path = Path(path).with_suffix('.wav')
+        lr.output.write_wav(str(out_path), wf, sample_rate, norm=False)
 
 print('Done')
