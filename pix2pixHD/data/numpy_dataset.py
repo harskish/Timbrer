@@ -14,8 +14,8 @@ class NumpyDataset(BaseDataset):
         self.opt = opt
         self.root = opt.dataroot    
 
-        self.archive_A_path = os.path.join(opt.dataroot, 'maestro_harp.npy')
-        self.archive_B_path = os.path.join(opt.dataroot, 'maestro_kalimba.npy')
+        self.archive_A_path = os.path.join(opt.dataroot, opt.datasets['source'])
+        self.archive_B_path = os.path.join(opt.dataroot, opt.datasets['target'])
 
         self.archive_A = np.load(self.archive_A_path, 'r')
         self.archive_B = np.load(self.archive_B_path, 'r')

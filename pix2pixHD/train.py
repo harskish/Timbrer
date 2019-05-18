@@ -29,6 +29,11 @@ def main():
     opt.timbrer = True
     opt.input_nc = 1
     opt.output_nc = 1
+    opt.which_epoch = 'harp_kalimba'
+    opt.datasets = {
+        'source': 'maestro_harp.npy',
+        'target': 'maestro_kalimba.npy'
+    }
 
     iter_path = os.path.join(opt.checkpoints_dir, opt.name, 'iter.txt')
     if opt.continue_train:
