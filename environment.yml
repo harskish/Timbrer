@@ -10,10 +10,13 @@ dependencies:
   - torchvision
   - cudatoolkit=10.0
   - python-sounddevice
-  - tensorflow
-  -pip:
-	- sf2utils
-	- mido
-	- dominate
+  - tensorflow=1.13
+  - pip
+  - pip:
+    - sf2utils
+    - mido
+    - dominate
+    - tensorflow-probability==0.6 # 0.6+ for lbfgs_minimize
+
 # conda env update -f environment.yml --prune
 

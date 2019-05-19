@@ -8,6 +8,7 @@ import time
 from . import util
 from . import html
 import scipy.misc
+import matplotlib.pyplot as plt
 try:
     from StringIO import StringIO  # Python 2.7
 except ImportError:
@@ -130,23 +131,22 @@ class Visualizer():
         txts = []
         links = []
 
+        def apply_colormap(data):
+            norm = plt.Normalize()
+            colors = plt.cm.viridis(norm(data))
+            return colors[0]
+
         for label, image_numpy in visuals.items():
             # Save np
             np_name = '%s_%s.npy' % (name, label)
-            numpy.save(np_name, image_numpy)
-            
-            # Save one tiff
-            image_name = '%s_%s.tiff' % (name, label)
-            save_path = os.path.join(image_dir, image_name)
-            tiff_data = np.mean(image_numpy, axis=0) if len(image_numpy.shape) == 3 else image_numpy
-            util.save_image(tiff_data, save_path)
+            save_path = os.path.join(image_dir, np_name)
+            np.save(save_path, image_numpy)
 
-            # And one jpg (for viewer)
-            image_name = '%s_%s.jpg' % (name, label)
+            # And one png (for viewer)
+            image_name = '%s_%s.png' % (name, label)
             save_path = os.path.join(image_dir, image_name)
-            data = ((image_numpy / (1 + image_numpy)) * 255).astype(np.uint8)
-            data = np.transpose(data, (1, 2, 0))
-            util.save_image(data, save_path)
+            data = apply_colormap(image_numpy)
+            util.save_image((data*255).astype(np.uint8), save_path, mode='RGBA')
 
             ims.append(image_name)
             txts.append(label)

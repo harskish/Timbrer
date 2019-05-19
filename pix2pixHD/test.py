@@ -2,6 +2,7 @@
 ### Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode).
 ### Modified by Erik Härkönen, 2019
 import os
+import numpy as np
 from collections import OrderedDict
 from torch.autograd import Variable
 from options.test_options import TestOptions
@@ -28,6 +29,12 @@ def main():
     opt.input_nc = 1
     opt.output_nc = 1
     opt.timbrer = True
+    opt.how_many = 100 # how many results to generate
+    opt.which_epoch = 'piano_guitar_256' #'harp_kalimba'
+    opt.datasets = {
+        'source': 'maestro_piano.npy',
+        'target': 'maestro_guitar.npy'
+    }
     
     opt.use_encoded_image = True # Adds GT to test set
     opt.use_features = False     # makes sure they aren't used in inference
@@ -75,16 +82,14 @@ def main():
         else:        
             generated = model.inference(data['label'], data['inst'], data['image'])
         
-        import numpy as np
-        def tensor_to_img(t):
+        def tensor_to_array(t):
             data = np.maximum(0.0, t.cpu().float().numpy())
             return data
 
         visuals = OrderedDict([
-            ('input_label', tensor_to_img(data['label'][0])),
-            #('synthesized_image', util.tensor2im(generated.data[0])),
-            ('synthesized_image', tensor_to_img(generated.data[0])),
-            ('ground truth', tensor_to_img(data['image'][0]))
+            ('input', tensor_to_array(data['label'][0])),
+            ('output', tensor_to_array(generated.data[0])),
+            ('reference', tensor_to_array(data['image'][0]))
         ])
         img_path = data['path']
         print('process image... %s' % img_path)

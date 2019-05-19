@@ -14,8 +14,8 @@ class NumpyDataset(BaseDataset):
         self.opt = opt
         self.root = opt.dataroot    
 
-        self.archive_A_path = os.path.join(opt.dataroot, 'maestro_piano.npy')
-        self.archive_B_path = os.path.join(opt.dataroot, 'maestro_harpsichord.npy')
+        self.archive_A_path = os.path.join(opt.dataroot, opt.datasets['source'])
+        self.archive_B_path = os.path.join(opt.dataroot, opt.datasets['target'])
 
         self.archive_A = np.load(self.archive_A_path, 'r')
         self.archive_B = np.load(self.archive_B_path, 'r')
@@ -61,10 +61,11 @@ class NumpyDataset(BaseDataset):
         A_tensor = torch.from_numpy(A_data)
         B_tensor = torch.from_numpy(B_data)
 
-        inst_tensor = feat_tensor = 0                    
+        inst_tensor = feat_tensor = 0
 
+        res_path = 'timbrer_{}_{}'.format('train' if self.opt.isTrain else 'test', index)
         input_dict = {'label': A_tensor, 'inst': inst_tensor, 'image': B_tensor, 
-                      'feat': feat_tensor, 'path': 'DONT_READ_FROM_ME'}
+                      'feat': feat_tensor, 'path': res_path}
 
         return input_dict
 
