@@ -1,13 +1,13 @@
 ﻿Timbrer: Musical Timbre Transfer
 ====================
 
-Installation:
+![Timbrer](splash.png)
 
-install anaconda
-run anaconda prompt
+## Installation
 
-run:
-conda env create -f environment.yml
+1. Install anaconda/miniconda
+2. Run in anaconda prompt: `conda env create -f environment.yml`
+3. Activate new environment: `conda activate timbrer`
 
 ## Dataset generation
 Run `generate_set_singlethread.py`. The input midi files will be downloaded and a dataset of spectrogram pairs will be created.

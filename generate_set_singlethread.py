@@ -18,8 +18,6 @@ import random
 import threading
 import time
 
-from concurrent.futures import ThreadPoolExecutor
-
 import tensorflow as tf
 
 setDir = 'data/midi/maestro'
@@ -120,7 +118,8 @@ block_size = 20 # how many extracts taken from each track
 
 # render matching audio for each of these soundfonts
 instruments = {
-    'piano': ('grand-piano-YDP-20160804.sf2', ''),
+    #'piano': ('grand-piano-YDP-20160804.sf2', ''),
+    'piano': ('SoundBlasterPiano.sf2', ''),
     #'flute': ('Milton_Pan_flute.sf2', ''),
     'guitar': ('spanish-classical-guitar.sf2', ''),
     #'harp' : ('Roland_SC-88.sf2', 'Harp'),
