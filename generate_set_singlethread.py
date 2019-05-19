@@ -17,7 +17,6 @@ import shutil
 import random
 import threading
 import time
-from mido import MidiFile
 
 from concurrent.futures import ThreadPoolExecutor
 
@@ -122,9 +121,8 @@ block_size = 20 # how many extracts taken from each track
 # render matching audio for each of these soundfonts
 instruments = {
     'piano': ('grand-piano-YDP-20160804.sf2', ''),
-    'harpsichord': ('Roland_SC-88.sf2', 'Harpsichord')
     #'flute': ('Milton_Pan_flute.sf2', ''),
-    #'guitar': ('spanish-classical-guitar.sf2', ''),
+    'guitar': ('spanish-classical-guitar.sf2', ''),
     #'harp' : ('Roland_SC-88.sf2', 'Harp'),
     #'kalimba' : ('Roland_SC-88.sf2', 'Kalimba'),
     #'pan' : ('Roland_SC-88.sf2', 'Pan flute')
