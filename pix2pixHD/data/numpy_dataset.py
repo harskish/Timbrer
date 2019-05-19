@@ -15,7 +15,7 @@ class NumpyDataset(BaseDataset):
         self.root = opt.dataroot    
 
         self.archive_A_path = os.path.join(opt.dataroot, 'maestro_piano.npy')
-        self.archive_B_path = os.path.join(opt.dataroot, 'maestro_guitar.npy')
+        self.archive_B_path = os.path.join(opt.dataroot, 'maestro_harpsichord.npy')
 
         self.archive_A = np.load(self.archive_A_path, 'r')
         self.archive_B = np.load(self.archive_B_path, 'r')
@@ -47,8 +47,16 @@ class NumpyDataset(BaseDataset):
         if self.archive_B is None:
             self.archive_B = np.load(self.archive_B_path, 'r')
         
-        A_data = np.expand_dims(self.archive_A[self.indices[index]], axis=0)
-        B_data = np.expand_dims(self.archive_B[self.indices[index]], axis=0)
+
+        # augmentation with gaussian noise in the mel-space (to do: what is the noise in primal space?)
+
+        A_data = self.archive_A[self.indices[index]]
+        A_data = np.maximum(np.zeros_like(A_data, dtype=np.float32), A_data + np.random.randn(*A_data.shape).astype(np.float32)*.5*float(np.random.rand()))
+        A_data = np.expand_dims(A_data, axis=0)
+
+        B_data = self.archive_B[self.indices[index]]
+        B_data = np.maximum(np.zeros_like(B_data, dtype=np.float32), B_data + np.random.randn(*B_data.shape).astype(np.float32)*.5*float(np.random.rand()))
+        B_data = np.expand_dims(B_data, axis=0)
 
         A_tensor = torch.from_numpy(A_data)
         B_tensor = torch.from_numpy(B_data)

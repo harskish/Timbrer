@@ -14,5 +14,6 @@ dependencies:
   -pip:
 	- sf2utils
 	- mido
+	- dominate
 # conda env update -f environment.yml --prune
 

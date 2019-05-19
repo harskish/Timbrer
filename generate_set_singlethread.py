@@ -83,7 +83,7 @@ def select_midi_soundfont(name, instrument='default'):
 def midi2wav(file, outpath, cfg):
     cmds = [
         SYNTH_BIN, '-c', str(cfg), str(file),
-        '-Od', '--reverb=g,25' '--noise-shaping=4', '--adjust-tempo=100'
+        '-Od', '--reverb=g,25' '--noise-shaping=4'
         '-EwpvseToz', '-f', '-A100', '-Ow',
         '-o', str(outpath)
     ]
@@ -98,7 +98,6 @@ num_samples = int(sample_rate*duration)
 # waveform to mel-scaled stft
 def logmel(waveform):
     z = tf.contrib.signal.stft(waveform, frame_length=4096, frame_step=500)
-    print('shape of z:', z.shape)
     magnitudes = tf.abs(z)
     filterbank = tf.contrib.signal.linear_to_mel_weight_matrix(
         num_mel_bins=512, #80
@@ -122,11 +121,12 @@ block_size = 20 # how many extracts taken from each track
 
 # render matching audio for each of these soundfonts
 instruments = {
-    #'piano': ('grand-piano-YDP-20160804.sf2', ''),
+    'piano': ('grand-piano-YDP-20160804.sf2', ''),
+    'harpsichord': ('Roland_SC-88.sf2', 'Harpsichord')
     #'flute': ('Milton_Pan_flute.sf2', ''),
     #'guitar': ('spanish-classical-guitar.sf2', ''),
-    'harp' : ('Roland_SC-88.sf2', 'Harp'),
-    'kalimba' : ('Roland_SC-88.sf2', 'Kalimba'),
+    #'harp' : ('Roland_SC-88.sf2', 'Harp'),
+    #'kalimba' : ('Roland_SC-88.sf2', 'Kalimba'),
     #'pan' : ('Roland_SC-88.sf2', 'Pan flute')
 }
 with tf.Session() as sess:
@@ -163,9 +163,6 @@ with tf.Session() as sess:
                 cur_len = len(librosa.load(str(file), sr = sample_rate)[0])
                 if j==0 or cur_len<min_len:
                     min_len = cur_len
-            
-            mid_len = int(np.floor(MidiFile(f).length*sample_rate))
-            # print('mid: ', mid_len, ' wav: ', min_len)
 
             # turn waveforms into sets of spectrograms
             for instrument in instruments:
@@ -173,11 +170,11 @@ with tf.Session() as sess:
                 waveform, _ = librosa.load(str(Path(f).with_suffix('.'+instrument+'.wav')), sr = sample_rate)
                 fp = np.load(Path('data/spectrogram/maestro_'+instrument+'.npy'), mmap_mode='r+')
                 # process extracts of the waveform at uniform intervals
-                for (j, start) in enumerate(np.linspace(0, mid_len-num_samples-1, num=block_size)):
+                for (j, start) in enumerate(np.linspace(0, min_len-num_samples-1, num=block_size)):
                     layer = i*block_size+j
                     if layer>=spectrogram_count:
                         break
-                    start = min(int(start), mid_len-num_samples-1)
+                    start = min(int(start), min_len-num_samples-1)
                     # output the spectrogram
                     fp[layer,:,:] = sess.run(output, feed_dict={waveform_data:waveform[start:start+num_samples]})
                     # print progress
