@@ -135,6 +135,7 @@ with tf.Session() as sess:
     # initialize instruments configurations and result files
     cfgs = []
     for instrument in instruments:
+        os.makedirs('data/spectrogram', exist_ok=True)
         dataFile = Path('data/spectrogram/maestro_'+instrument+'.npy')
         if dataFile.exists():
             print(str(dataFile), 'already exists!')
