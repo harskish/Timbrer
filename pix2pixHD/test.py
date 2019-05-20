@@ -30,7 +30,7 @@ def main():
     opt.output_nc = 1
     opt.timbrer = True
     opt.how_many = 100 # how many results to generate
-    opt.which_epoch = 'piano_guitar_256' #'harp_kalimba'
+    opt.which_epoch = 'piano_guitar' #'harp_kalimba'
     opt.datasets = {
         'source': 'maestro_piano.npy',
         'target': 'maestro_guitar.npy'

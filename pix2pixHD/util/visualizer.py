@@ -61,15 +61,17 @@ class Visualizer():
             for label, image_numpy in visuals.items():
                 if isinstance(image_numpy, list):
                     for i in range(len(image_numpy)):
-                        img_path = os.path.join(self.img_dir, 'epoch%.3d_%s_%d.jpg' % (epoch, label, i))
-                        util.save_image(image_numpy[i], img_path)
+                        img_path = os.path.join(self.img_dir, 'epoch%.3d_%s_%d.png' % (epoch, label, i))
+                        data = self.apply_colormap(image_numpy[i])
+                        util.save_image((data*255).astype(np.uint8), img_path, mode='RGBA')
                 else:
-                    if label == 'synthesized_image_np':
+                    if label == 'synthesized':
                         np_path = os.path.join(self.img_dir, 'epoch%.3d_gen.npy' % epoch)
                         np.save(np_path, image_numpy)
-                    else:
-                        img_path = os.path.join(self.img_dir, 'epoch%.3d_%s.jpg' % (epoch, label))
-                        util.save_image(image_numpy, img_path)
+                        
+                    img_path = os.path.join(self.img_dir, 'epoch%.3d_%s.png' % (epoch, label))
+                    data = self.apply_colormap(image_numpy)
+                    util.save_image((data*255).astype(np.uint8), img_path, mode='RGBA')
 
             # update website
             webpage = html.HTML(self.web_dir, 'Experiment name = %s' % self.name, refresh=30)
@@ -82,7 +84,7 @@ class Visualizer():
                 for label, image_numpy in visuals.items():
                     if isinstance(image_numpy, list):
                         for i in range(len(image_numpy)):
-                            img_path = 'epoch%.3d_%s_%d.jpg' % (n, label, i)
+                            img_path = 'epoch%.3d_%s_%d.png' % (n, label, i)
                             ims.append(img_path)
                             txts.append(label+str(i))
                             links.append(img_path)
@@ -90,7 +92,7 @@ class Visualizer():
                         # don't add to html
                         continue
                     else:
-                        img_path = 'epoch%.3d_%s.jpg' % (n, label)
+                        img_path = 'epoch%.3d_%s.png' % (n, label)
                         ims.append(img_path)
                         txts.append(label)
                         links.append(img_path)
@@ -120,6 +122,11 @@ class Visualizer():
         with open(self.log_name, "a") as log_file:
             log_file.write('%s\n' % message)
 
+    def apply_colormap(self, data):
+        norm = plt.Normalize()
+        colors = plt.cm.viridis(norm(data))
+        return colors[0]
+
     # save image to the disk
     def save_images(self, webpage, visuals, image_path):
         image_dir = webpage.get_image_dir()
@@ -131,11 +138,6 @@ class Visualizer():
         txts = []
         links = []
 
-        def apply_colormap(data):
-            norm = plt.Normalize()
-            colors = plt.cm.viridis(norm(data))
-            return colors[0]
-
         for label, image_numpy in visuals.items():
             # Save np
             np_name = '%s_%s.npy' % (name, label)
@@ -145,7 +147,7 @@ class Visualizer():
             # And one png (for viewer)
             image_name = '%s_%s.png' % (name, label)
             save_path = os.path.join(image_dir, image_name)
-            data = apply_colormap(image_numpy)
+            data = self.apply_colormap(image_numpy)
             util.save_image((data*255).astype(np.uint8), save_path, mode='RGBA')
 
             ims.append(image_name)

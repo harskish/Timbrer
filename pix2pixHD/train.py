@@ -29,10 +29,10 @@ def main():
     opt.timbrer = True
     opt.input_nc = 1
     opt.output_nc = 1
-    opt.which_epoch = 'harp_kalimba'
+    opt.which_epoch = 'piano_guitar'
     opt.datasets = {
-        'source': 'maestro_harp.npy',
-        'target': 'maestro_kalimba.npy'
+        'source': 'maestro_piano.npy',
+        'target': 'maestro_guitar.npy'
     }
 
     iter_path = os.path.join(opt.checkpoints_dir, opt.name, 'iter.txt')
@@ -126,10 +126,9 @@ def main():
 
             ### display output images
             if save_fake:
-                visuals = OrderedDict([('input_label', util.tensor2label(data['label'][0], opt.label_nc)),
-                                    ('synthesized_image', util.tensor2im(generated.data[0])),
-                                    ('synthesized_image_np', np.maximum(0.0, generated.data[0].cpu().float().numpy())),
-                                    ('real_image', util.tensor2im(data['image'][0]))])
+                visuals = OrderedDict([('input', np.maximum(0.0, data['label'][0].cpu().float().numpy())),
+                                    ('synthesized', np.maximum(0.0, generated.data[0].cpu().float().numpy())),
+                                    ('reference', np.maximum(0.0, data['image'][0].cpu().float().numpy()))])
                 visualizer.display_current_results(visuals, epoch, total_steps)
 
             ### save latest model
