@@ -3,6 +3,10 @@
 
 ![Timbrer](splash.png)
 
+## Samples
+
+See [samples](./samples.md) for a preview of the output quality.
+
 ## Installation
 
 1. Install anaconda/miniconda
