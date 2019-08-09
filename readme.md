@@ -1,7 +1,10 @@
 ﻿Timbrer: Musical Timbre Transfer
 ====================
 
-![Timbrer](splash.png)
+![Timbrer](docs/splash.png)
+
+## Audio samples
+Timbre transfer samples can be found [here](https://harskish.github.io/Timbrer/index.html).
 
 ## Installation
 
