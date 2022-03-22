@@ -1,22 +1,24 @@
-name: timbrer
+name: timbrer2
 channels:
   - defaults
   - conda-forge
   - pytorch
 dependencies:
-  - python=3.6
-  - librosa=0.6
-  - pytorch=1.1
-  - torchvision
-  - cudatoolkit=10.0
+  - python=3.9
+  - pytorch=1.9.0
+  - torchvision=0.10.0
+  - torchaudio=0.9.0
+  - cudatoolkit=10.2
   - python-sounddevice
-  - tensorflow=1.13
+  - librosa<0.10 # deprecated syntax within torchlibrosa 0.0.9
+  - tensorflow # CPU-only OK
   - pip
   - pip:
+    - torchlibrosa==0.0.9
     - sf2utils
     - mido
     - dominate
-    - tensorflow-probability==0.6 # 0.6+ for lbfgs_minimize
+    - tensorflow-probability>=0.6 # 0.6+ for lbfgs_minimize
 
 # conda env update -f environment.yml --prune
 
