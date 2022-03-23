@@ -18,7 +18,7 @@ sample_rate = 44100
 duration = 6.0
 num_samples = int(sample_rate*duration)
 n_mels = 512
-hop = 500
+hop = 517 # produces time res 512 (TODO: divisibility & padding?)
 n_fft = 2*2048
 target_shape = (1, 512, 512)
 
@@ -100,6 +100,40 @@ def mel_pt_nn(waveform):
     melspectrogram = cache['nn_mel'].to(waveform.device)(waveform).permute(0, 2, 1)
     return torch.log1p(melspectrogram)
 
+def find_bin_size(n_octaves, n_bins, fmin, sr):
+    max_octaves = np.log2(0.5*sr/fmin)
+    assert n_octaves < max_octaves, 'n_octaves too large for range [fmin,sr/2]'
+    
+    bins_per_octave = 0
+    fmax_t = float('inf')
+
+    while fmax_t > sr / 2:
+        bins_per_octave += 1
+        
+        # Calculate the lowest frequency bin for the top octave kernel
+        fmin_t = fmin * 2 ** (n_octaves - 1)
+        remainder = n_bins % bins_per_octave
+
+        if remainder == 0:
+            # Calculate the top bin frequency
+            fmax_t = fmin_t * 2 ** ((bins_per_octave - 1) / bins_per_octave)
+        else:
+            # Calculate the top bin frequency
+            fmax_t = fmin_t * 2 ** ((remainder - 1) / bins_per_octave)
+
+    return bins_per_octave
+
+def cqt_pt_nn(waveform):
+    if 'nn_cqt' not in cache:
+        fmin = 32.7
+        bins = 1024 #512
+        bin_size = 109 #find_bin_size(n_octaves=12, n_bins=bins, fmin=fmin, sr=sample_rate)
+        cache['nn_cqt'] = features.CQT2010v2(
+            sr=sample_rate, n_bins=bins, bins_per_octave=bin_size, fmin=fmin, fmax=0.5*sample_rate, hop_length=512).cuda()
+
+    cqt = cache['nn_cqt'].to(waveform.device)(waveform).permute(0, 2, 1)
+    return cqt
+
 def comp_fwd(waveform, wftf):
     # Spectrogram comparison
     mag1 = stft_tf(wftf)
@@ -132,16 +166,16 @@ def comp_bwd(waveform, wftf):
     
     # Optimization-based
     device = 'cuda'
-    B = 3 # LBFGS scales poorly with batch size
-    steps = 200
-    func = mel_pt_nn
+    B = 2 # LBFGS scales poorly with batch size
+    steps = 300
+    func = mel_pt_nn #cqt_pt_nn
     
     res = []
     for i in range(0, waveform.shape[0], B):
-        wf = waveform[i:i+B]
+        wf = waveform[i:i+B].to(device)
         noise = torch.tensor(np.random.normal(scale=1e-1, size=wf.shape), dtype=torch.float32, device=device, requires_grad=True)
-        opt = optim.LBFGS(params=[noise], lr=0.5, max_iter=steps, tolerance_change=0, tolerance_grad=0)
-        target = func(wf.to(device)).detach()    
+        opt = optim.LBFGS(params=[noise], lr=0.75, max_iter=steps, tolerance_change=0, tolerance_grad=0)
+        target = func(wf).detach()
     
         iteration = 0
         def closure():
@@ -149,9 +183,11 @@ def comp_bwd(waveform, wftf):
             iteration += 1
 
             opt.zero_grad()
-            x = mel_pt_nn(noise)
-            loss = F.mse_loss(x, target)
+            loss = F.mse_loss(func(noise), target)
             loss.backward()
+
+            # TODO: waveforms not aligned somehow?
+            waveform_loss = F.mse_loss(noise.detach(), wf)
             
             #if iteration == 4:
             #    play_audio(noise[0])
@@ -160,7 +196,7 @@ def comp_bwd(waveform, wftf):
             #     plot_comp([x.cpu().detach()], [f'iter{iteration}'], y_scale='mel')
             #     play_audio(noise[1])
 
-            print('{}/{}: Loss = {:.2e}'.format(iteration, steps, loss.item()))
+            print('{}/{}: Img loss = {:.2e}, waveform loss: {:.2e}'.format(iteration, steps, loss.item(), waveform_loss.item()))
             return loss
         
         if isinstance(opt, optim.LBFGS):
@@ -176,8 +212,9 @@ def comp_bwd(waveform, wftf):
     print('Done')
 
 
-n_parts = 6
-waveform, sr = librosa.load('C:/Users/Erik/code/timbrer/data/wav/shakuhachi.wav', sr=sample_rate, duration=n_parts*duration)
+n_parts = 3
+#waveform, sr = librosa.load('C:/Users/Erik/code/timbrer/data/wav/shakuhachi.wav', sr=sample_rate, duration=n_parts*duration)
+waveform, sr = librosa.load('C:/Users/Erik/BATTLE BEAST - Eye of the Storm.wav', sr=sample_rate, offset=15, duration=n_parts*duration)
 assert sr == sample_rate
 
 # Round to integer number of parts
