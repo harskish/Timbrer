@@ -161,14 +161,14 @@ def comp_fwd(waveform, wftf):
 
 def comp_bwd(waveform, wftf):
     # Griffin-Lim
-    #w1 = features.Griffin_Lim(n_fft, hop_length=hop, device='cuda')(stft_pt_nn(waveform).permute(0, 2, 1).detach().cuda())
-    #play_audio(w1[0])
+    w1 = features.Griffin_Lim(n_fft, hop_length=hop, device='cuda')(stft_pt_nn(waveform).permute(0, 2, 1).detach().cuda())
+    play_audio(torch.cat(w1.unbind(0)))
     
     # Optimization-based
     device = 'cuda'
-    B = 2 # LBFGS scales poorly with batch size
     steps = 300
-    func = mel_pt_nn #cqt_pt_nn
+    func = cqt_pt_nn #cqt_pt_nn
+    B = 1 if func == cqt_pt_nn else 2 # LBFGS scales poorly with batch size
     
     res = []
     for i in range(0, waveform.shape[0], B):
