@@ -236,7 +236,8 @@ def comp_bwd(waveform, title):
 if __name__ == '__main__':
     fname, offset = ('data/wav/shakuhachi.wav', 0)
     #fname, offset = ('C:/Users/Erik/eye_of_the_storm.wav', 15)
-    
+    title = Path(fname).with_suffix('').name
+
     n_parts = 3
     waveform, sr = audio_io.read(fname, offset=offset, duration=n_parts*duration)
     assert sr == sample_rate
@@ -249,10 +250,14 @@ if __name__ == '__main__':
     waveform = np.stack([waveform[i*num_samples:(i+1)*num_samples] for i in range(n_parts)], axis=0)
     wfpt = torch.from_numpy(waveform).to('cpu')
 
+    # Generate parts for running inference
+    for i, wf in enumerate(logmel(wfpt)):
+        np.save(f'{title}_{i}.npy', wf.cpu().numpy())
+
     # Forward mode
     #comp_fwd(wfpt)
 
     # Reconstruction
-    comp_bwd(wfpt, Path(fname).with_suffix('').name)
+    comp_bwd(wfpt, title)
 
     print('Done')
