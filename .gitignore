@@ -106,3 +106,6 @@ venv.bak/
 # datasets
 data/midi/maestro*
 data/spectrogram/*
+
+.vscode/
+*.mp3

@@ -1,28 +1,22 @@
-import wave
 import torch
 import torch.optim as optim
 import torch.nn.functional as F
-import tensorflow as tf
+#import tensorflow as tf
 import numpy as np
 import librosa
 import librosa.display
 import torchlibrosa as tl
 from nnAudio import features
+import audio_io
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 plt.ion()
 
 # Port mel-scaled spectrogram code to Torch
+from constants import *
 
-sample_rate = 44100
-duration = 6.0
-num_samples = int(sample_rate*duration)
-n_mels = 512
-hop = 517 # produces time res 512 (TODO: divisibility & padding?)
-n_fft = 2*2048
-target_shape = (1, 512, 512)
-
-def plot_comp(data, labels, y_scale='log'):    
+def plot_comp(data, labels, y_scale='log'):
     num_methods = len(data)
     N, H, W = data[0].shape
     
@@ -39,27 +33,31 @@ def plot_comp(data, labels, y_scale='log'):
     
     return fig, ax
 
-def play_audio(waveform):
+def _to_numpy(waveform):
     if torch.is_tensor(waveform):
         waveform = waveform.detach().cpu()
-    
     if not isinstance(waveform, np.ndarray):
         waveform = waveform.numpy()
-    
+    return waveform
+
+def play_audio(waveform, blocking=True):
+    waveform = _to_numpy(waveform)
     mag = np.abs(waveform).max()
     if mag > 1.0:
         waveform /= mag
 
     import sounddevice as sd
-    sd.play(waveform, sample_rate, blocking=True)
+    sd.play(waveform, sample_rate, blocking=blocking)
 
 cache = {}
 
 def stft_tf(waveform):
+    import tensorflow as tf
     z = tf.signal.stft(waveform, frame_length=n_fft, frame_step=hop, pad_end=True)
     return tf.abs(z)
 
-def mel_tf(waveform):
+def logmel_tf(waveform):
+    import tensorflow as tf
     magnitudes = stft_tf(waveform)
     filterbank = tf.signal.linear_to_mel_weight_matrix(
         num_mel_bins=n_mels, #80
@@ -76,7 +74,7 @@ def stft_pt_tl(waveform):
     
     return cache['tl_stft'].to(waveform.device)(waveform)[:, 0, :, :]
 
-def mel_pt_tl(waveform):
+def logmel_tl(waveform):
     if 'tl_mel' not in cache:
         cache['tl_mel'] = torch.nn.Sequential(
             tl.Spectrogram(n_fft=n_fft, hop_length=hop, power=1),
@@ -86,13 +84,16 @@ def mel_pt_tl(waveform):
     melspectrogram = cache['tl_mel'].to(waveform.device)(waveform)
     return torch.log1p(melspectrogram)[:, 0, :, :]
 
-def stft_pt_nn(waveform):
+def stft(waveform):
     if 'nn_stft' not in cache:
-        cache['nn_stft'] = features.STFT(n_fft=n_fft, hop_length=hop, fmin=0, fmax=0.5*sample_rate, sr=sample_rate, output_format='Magnitude').cuda()
+        cache['nn_stft'] = features.STFT(n_fft=2*n_mels-1, hop_length=hop, fmin=0, fmax=0.5*sample_rate, sr=sample_rate, output_format='Magnitude').cuda()
     
     return cache['nn_stft'].to(waveform.device)(waveform).permute(0, 2, 1)
 
-def mel_pt_nn(waveform):
+def logstft(waveform):
+    return torch.log1p(stft(waveform))
+
+def logmel(waveform):
     if 'nn_mel' not in cache:
         cache['nn_mel'] = features.MelSpectrogram(
             sr=sample_rate, n_fft=n_fft, n_mels=n_mels, power=1, fmin=0, fmax=0.5*sample_rate, hop_length=hop).cuda()
@@ -123,7 +124,7 @@ def find_bin_size(n_octaves, n_bins, fmin, sr):
 
     return bins_per_octave
 
-def cqt_pt_nn(waveform):
+def cqt(waveform):
     if 'nn_cqt' not in cache:
         fmin = 32.7
         bins = 1024 #512
@@ -134,11 +135,14 @@ def cqt_pt_nn(waveform):
     cqt = cache['nn_cqt'].to(waveform.device)(waveform).permute(0, 2, 1)
     return cqt
 
-def comp_fwd(waveform, wftf):
+def comp_fwd(waveform):
+    import tensorflow as tf
+    wftf = tf.constant(waveform)
+
     # Spectrogram comparison
     mag1 = stft_tf(wftf)
     mag2 = stft_pt_tl(waveform)
-    mag3 = stft_pt_nn(waveform)
+    mag3 = stft(waveform)
 
     fig, ax = plot_comp([mag1, mag2, mag3], ['tf.signal.stft', 'tl.Spectrogram', 'nnAudio.STFT'], y_scale='log')
     fig.set_size_inches(30/2.54, 18/2.54)
@@ -146,9 +150,9 @@ def comp_fwd(waveform, wftf):
     plt.close('all')
     
     # Mel-scaled spectrogram comparison
-    ms1 = mel_tf(wftf)
-    ms2 = mel_pt_tl(waveform)
-    ms3 = mel_pt_nn(waveform)
+    ms1 = logmel_tf(wftf)
+    ms2 = logmel_tl(waveform)
+    ms3 = logmel(waveform)
 
     s1_scaled = ms1 / tf.reduce_max(ms1)
     s2_scaled = ms2 / ms2.max()
@@ -159,62 +163,73 @@ def comp_fwd(waveform, wftf):
     plt.savefig('mel_comp.png')
     plt.close('all')
 
-def comp_bwd(waveform, wftf):
+def comp_bwd(waveform, title):
+    audio_io.write(_to_numpy(torch.cat(waveform.unbind(0))), f'{title}_orig.mp3', bitrate='256k')
+    
     # Griffin-Lim
-    w1 = features.Griffin_Lim(n_fft, hop_length=hop, device='cuda')(stft_pt_nn(waveform).permute(0, 2, 1).detach().cuda())
-    play_audio(torch.cat(w1.unbind(0)))
+    spec = stft(waveform).permute(0, 2, 1).detach().cuda()
+    w1 = features.Griffin_Lim(2*spec.shape[1]-1, hop_length=hop, device='cuda', n_iter=128)(spec)
+    w1 = torch.cat(w1.unbind(0)).cpu().numpy()
+    audio_io.write(w1, f'{title}_stft_griffinlim_{spec.shape[1]}x{spec.shape[2]}.mp3', bitrate='256k')
+    #play_audio(w1, blocking=False)
     
     # Optimization-based
-    device = 'cuda'
-    steps = 300
-    func = cqt_pt_nn #cqt_pt_nn
-    B = 1 if func == cqt_pt_nn else 2 # LBFGS scales poorly with batch size
-    
-    res = []
-    for i in range(0, waveform.shape[0], B):
-        wf = waveform[i:i+B].to(device)
-        noise = torch.tensor(np.random.normal(scale=1e-1, size=wf.shape), dtype=torch.float32, device=device, requires_grad=True)
-        opt = optim.LBFGS(params=[noise], lr=0.75, max_iter=steps, tolerance_change=0, tolerance_grad=0)
-        target = func(wf).detach()
-    
-        iteration = 0
-        def closure():
-            nonlocal iteration
-            iteration += 1
+    for func in [logmel, cqt, stft, logstft]:
+        device = 'cuda'
+        steps = 300
+        B = 1 if func == cqt else 2 # LBFGS scales poorly with batch size
+        
+        res = []
+        for i in range(0, waveform.shape[0], B):
+            wf = waveform[i:i+B].to(device)
+            noise = torch.tensor(np.random.normal(scale=1e-1, size=wf.shape), dtype=torch.float32, device=device, requires_grad=True)
+            opt = optim.LBFGS(params=[noise], lr=0.75, max_iter=steps, tolerance_change=0, tolerance_grad=0)
+            target = func(wf).detach()
+        
+            iteration = 0
+            def closure():
+                nonlocal iteration
+                iteration += 1
 
-            opt.zero_grad()
-            loss = F.mse_loss(func(noise), target)
-            loss.backward()
+                opt.zero_grad()
+                loss = F.mse_loss(func(noise), target)
+                loss.backward()
 
-            # TODO: waveforms not aligned somehow?
-            waveform_loss = F.mse_loss(noise.detach(), wf)
+                # TODO: waveforms not aligned somehow?
+                waveform_loss = F.mse_loss(noise.detach(), wf)
+                
+                #if iteration == 4:
+                #    play_audio(noise[0])
+
+                # if iteration % 50 == 0:
+                #     plot_comp([x.cpu().detach()], [f'iter{iteration}'], y_scale='mel')
+                #     play_audio(noise[1])
+
+                print('{} {}/{}: Img loss = {:.2e}, waveform loss: {:.2e}'.format(func.__name__, iteration, steps, loss.item(), waveform_loss.item()))
+                return loss
             
-            #if iteration == 4:
-            #    play_audio(noise[0])
-
-            # if iteration % 50 == 0:
-            #     plot_comp([x.cpu().detach()], [f'iter{iteration}'], y_scale='mel')
-            #     play_audio(noise[1])
-
-            print('{}/{}: Img loss = {:.2e}, waveform loss: {:.2e}'.format(iteration, steps, loss.item(), waveform_loss.item()))
-            return loss
-        
-        if isinstance(opt, optim.LBFGS):
-            opt.step(closure)
-        else:
-            for _ in range(steps):
+            if isinstance(opt, optim.LBFGS):
                 opt.step(closure)
-        
-        for c in noise:
-            res.append(c.detach())
+            else:
+                for _ in range(steps):
+                    opt.step(closure)
+            
+            for c in noise:
+                res.append(c.detach())
 
-    play_audio(torch.cat(res))
+        w = torch.cat(res).detach().cpu().numpy()
+        H, W = target.shape[1:]
+        audio_io.write(w, f'{title}_{func.__name__}_lbfgs_{H}x{W}.mp3', bitrate='256k')
+        #play_audio(w, blocking=False)
+    
     print('Done')
 
 if __name__ == '__main__':
+    #fname, offset = ('data/wav/shakuhachi.wav', 0)
+    fname, offset = ('C:/Users/Erik/eye_of_the_storm.wav', 15)
+    
     n_parts = 3
-    #waveform, sr = librosa.load('C:/Users/Erik/code/timbrer/data/wav/shakuhachi.wav', sr=sample_rate, duration=n_parts*duration)
-    waveform, sr = librosa.load('C:/Users/Erik/BATTLE BEAST - Eye of the Storm.wav', sr=sample_rate, offset=15, duration=n_parts*duration)
+    waveform, sr = audio_io.read(fname, offset=offset, duration=n_parts*duration)
     assert sr == sample_rate
 
     # Round to integer number of parts
@@ -223,14 +238,12 @@ if __name__ == '__main__':
 
     # Add batch dim
     waveform = np.stack([waveform[i*num_samples:(i+1)*num_samples] for i in range(n_parts)], axis=0)
-
     wfpt = torch.from_numpy(waveform).to('cpu')
-    wftf = tf.constant(waveform)
 
     # Forward mode
-    #comp_fwd(wfpt, wftf)
+    #comp_fwd(wfpt)
 
     # Reconstruction
-    comp_bwd(wfpt, wftf)
+    comp_bwd(wfpt, Path(fname).with_suffix('').name)
 
     print('Done')
