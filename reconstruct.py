@@ -1,6 +1,7 @@
 import torch
 import torch.optim
 import torch.nn.functional as F
+from pathlib import Path
 import numpy as np
 import sys
 from constants import *
@@ -11,7 +12,7 @@ import audio_io
 files = sys.argv[1:]
 
 device = 'cuda'
-steps = 300
+steps = 150
 B = 2 # LBFGS scales poorly with batch size
 func = logmel
 
@@ -22,7 +23,7 @@ res = []
 for i in range(0, len(files), B):
     target = specs[i:i+B].to(device)
     noise = torch.tensor(np.random.normal(scale=1e-1, size=[target.shape[0], num_samples]), dtype=torch.float32, device=device, requires_grad=True)
-    opt = torch.optim.LBFGS(params=[noise], lr=0.75, max_iter=steps, tolerance_change=0, tolerance_grad=0)
+    opt = torch.optim.LBFGS(params=[noise], lr=0.7, max_iter=steps, tolerance_change=0, tolerance_grad=0)
 
     iteration = 0
     def closure():
@@ -43,7 +44,8 @@ for i in range(0, len(files), B):
     opt.step(closure)
     
     for j, waveform in enumerate(noise.detach().cpu().numpy()):
-        audio_io.write(waveform, f'{i+j}.mp3', bitrate='256k')
+        outpath = Path(files[i+j]).with_suffix('.mp3')
+        audio_io.write(waveform, str(outpath), bitrate='256k')
         #play_audio(waveform, blocking=False)
 
 print('Done')
