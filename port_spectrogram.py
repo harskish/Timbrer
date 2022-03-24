@@ -211,26 +211,26 @@ def comp_bwd(waveform, wftf):
     play_audio(torch.cat(res))
     print('Done')
 
+if __name__ == '__main__':
+    n_parts = 3
+    #waveform, sr = librosa.load('C:/Users/Erik/code/timbrer/data/wav/shakuhachi.wav', sr=sample_rate, duration=n_parts*duration)
+    waveform, sr = librosa.load('C:/Users/Erik/BATTLE BEAST - Eye of the Storm.wav', sr=sample_rate, offset=15, duration=n_parts*duration)
+    assert sr == sample_rate
 
-n_parts = 3
-#waveform, sr = librosa.load('C:/Users/Erik/code/timbrer/data/wav/shakuhachi.wav', sr=sample_rate, duration=n_parts*duration)
-waveform, sr = librosa.load('C:/Users/Erik/BATTLE BEAST - Eye of the Storm.wav', sr=sample_rate, offset=15, duration=n_parts*duration)
-assert sr == sample_rate
+    # Round to integer number of parts
+    n_parts = len(waveform) // num_samples
+    waveform = waveform[:n_parts*num_samples]
 
-# Round to integer number of parts
-n_parts = len(waveform) // num_samples
-waveform = waveform[:n_parts*num_samples]
+    # Add batch dim
+    waveform = np.stack([waveform[i*num_samples:(i+1)*num_samples] for i in range(n_parts)], axis=0)
 
-# Add batch dim
-waveform = np.stack([waveform[i*num_samples:(i+1)*num_samples] for i in range(n_parts)], axis=0)
+    wfpt = torch.from_numpy(waveform).to('cpu')
+    wftf = tf.constant(waveform)
 
-wfpt = torch.from_numpy(waveform).to('cpu')
-wftf = tf.constant(waveform)
+    # Forward mode
+    #comp_fwd(wfpt, wftf)
 
-# Forward mode
-#comp_fwd(wfpt, wftf)
+    # Reconstruction
+    comp_bwd(wfpt, wftf)
 
-# Reconstruction
-comp_bwd(wfpt, wftf)
-
-print('Done')
+    print('Done')

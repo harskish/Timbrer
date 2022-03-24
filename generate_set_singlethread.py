@@ -12,7 +12,8 @@ import urllib.request
 import os
 import zipfile
 import shutil
-import tensorflow as tf
+import torch
+from port_spectrogram import mel_pt_nn
 
 setDir = 'data/midi/maestro'
 SYNTH_BIN = 'external/windows/timidity++/timidity.exe'
@@ -86,22 +87,6 @@ sample_rate = 44100
 duration = 6.0
 num_samples = int(sample_rate*duration)
 
-# waveform to mel-scaled stft
-def logmel(waveform):
-    z = tf.signal.stft(waveform, frame_length=4096, frame_step=500)
-    magnitudes = tf.abs(z)
-    filterbank = tf.signal.linear_to_mel_weight_matrix(
-        num_mel_bins=512, #80
-        num_spectrogram_bins=magnitudes.shape[-1],
-        sample_rate=sample_rate,
-        lower_edge_hertz=0.0,
-        upper_edge_hertz=0.5*sample_rate) #8k
-    melspectrogram = tf.tensordot(magnitudes, filterbank, 1)
-    return tf.math.log1p(melspectrogram)[:512, :512]
-
-# suppress tf output
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-
 # dataset parameters
 spectrogram_count = 20000
 block_size = 20 # how many extracts taken from each track
@@ -144,7 +129,8 @@ def renderMidi(i, f, cfgs):
                 break
             start = min(int(start), min_len-num_samples-1)
             # output the spectrogram
-            fp[layer,:,:] = logmel(tf.constant(waveform[start:start+num_samples])).numpy()
+            wf = torch.from_numpy(waveform[start:start+num_samples]).unsqueeze(0).to('cuda')
+            fp[layer,:,:] = mel_pt_nn(wf).cpu().numpy()
             # print progress
             print('\r', instrument, ' ', layer + 1, '/', spectrogram_count, 'done', flush=True, end="")
         print('')
