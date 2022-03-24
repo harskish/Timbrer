@@ -101,38 +101,47 @@ def logmel(waveform):
     melspectrogram = cache['nn_mel'].to(waveform.device)(waveform).permute(0, 2, 1)
     return torch.log1p(melspectrogram)
 
-def find_bin_size(n_octaves, n_bins, fmin, sr):
-    max_octaves = np.log2(0.5*sr/fmin)
-    assert n_octaves < max_octaves, 'n_octaves too large for range [fmin,sr/2]'
-    
-    bins_per_octave = 0
-    fmax_t = float('inf')
-
-    while fmax_t > sr / 2:
-        bins_per_octave += 1
+def find_bin_size(n_bins, fmin, sr):
+    bin_sizes = np.arange(n_bins//20, n_bins, dtype=np.int32) # max: 20 octaves
+    fmaxs = []
+    octs = []
+    for bins_per_octave in bin_sizes:
+        n_octaves = int(np.ceil(float(n_bins) / bins_per_octave))
+        octs.append(n_octaves)
         
         # Calculate the lowest frequency bin for the top octave kernel
         fmin_t = fmin * 2 ** (n_octaves - 1)
         remainder = n_bins % bins_per_octave
 
+        # Calculate the top bin frequency
         if remainder == 0:
-            # Calculate the top bin frequency
             fmax_t = fmin_t * 2 ** ((bins_per_octave - 1) / bins_per_octave)
         else:
-            # Calculate the top bin frequency
             fmax_t = fmin_t * 2 ** ((remainder - 1) / bins_per_octave)
 
-    return bins_per_octave
+        fmaxs.append(fmax_t)
 
-def cqt(waveform):
-    if 'nn_cqt' not in cache:
-        fmin = 32.7
-        bins = 1024 #512
-        bin_size = 109 #find_bin_size(n_octaves=12, n_bins=bins, fmin=fmin, sr=sample_rate)
-        cache['nn_cqt'] = features.CQT2010v2(
-            sr=sample_rate, n_bins=bins, bins_per_octave=bin_size, fmin=fmin, fmax=0.5*sample_rate, hop_length=512).cuda()
+    assert any(np.array(fmaxs) <= sr / 2), 'Could not find bin size'
 
-    cqt = cache['nn_cqt'].to(waveform.device)(waveform).permute(0, 2, 1)
+    ibest = fmaxs.index(max([f for f in fmaxs if f <= sr/2]))
+    return bin_sizes[ibest], octs[ibest]
+
+def cqt1k(waveform):
+    return cqt(waveform, yres=1024)
+
+def cqt2k(waveform):
+    return cqt(waveform, yres=2048)
+
+def cqt(waveform, yres=512):
+    key = f'nn_cqt_{yres}'
+    if key not in cache:
+        fmin = 0.5*32.7
+        bin_size, n_oct = find_bin_size(n_bins=yres, fmin=fmin, sr=sample_rate)
+        hop = max(512, 2**(n_oct-1))
+        cache[key] = features.CQT2010v2(
+            sr=sample_rate, n_bins=yres, bins_per_octave=bin_size, fmin=fmin, fmax=0.5*sample_rate, hop_length=hop).cuda()
+
+    cqt = cache[key].to(waveform.device)(waveform).permute(0, 2, 1)
     return cqt
 
 def comp_fwd(waveform):
@@ -174,10 +183,10 @@ def comp_bwd(waveform, title):
     #play_audio(w1, blocking=False)
     
     # Optimization-based
-    for func in [logmel, cqt, stft, logstft]:
+    for func in [cqt2k, logmel, stft, logstft]:
         device = 'cuda'
         steps = 300
-        B = 1 if func == cqt else 2 # LBFGS scales poorly with batch size
+        B = 1 if 'cqt' in func.__name__ else 2 # LBFGS scales poorly with batch size
         
         res = []
         for i in range(0, waveform.shape[0], B):
@@ -225,8 +234,8 @@ def comp_bwd(waveform, title):
     print('Done')
 
 if __name__ == '__main__':
-    #fname, offset = ('data/wav/shakuhachi.wav', 0)
-    fname, offset = ('C:/Users/Erik/eye_of_the_storm.wav', 15)
+    fname, offset = ('data/wav/shakuhachi.wav', 0)
+    #fname, offset = ('C:/Users/Erik/eye_of_the_storm.wav', 15)
     
     n_parts = 3
     waveform, sr = audio_io.read(fname, offset=offset, duration=n_parts*duration)
