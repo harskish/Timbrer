@@ -13,7 +13,7 @@ import os
 import zipfile
 import shutil
 import torch
-from port_spectrogram import mel_pt_nn
+from port_spectrogram import logmel
 
 setDir = 'data/midi/maestro'
 SYNTH_BIN = 'external/windows/timidity++/timidity.exe'
@@ -130,7 +130,7 @@ def renderMidi(i, f, cfgs):
             start = min(int(start), min_len-num_samples-1)
             # output the spectrogram
             wf = torch.from_numpy(waveform[start:start+num_samples]).unsqueeze(0).to('cuda')
-            fp[layer,:,:] = mel_pt_nn(wf).cpu().numpy()
+            fp[layer,:,:] = logmel(wf).cpu().numpy()
             # print progress
             print('\r', instrument, ' ', layer + 1, '/', spectrogram_count, 'done', flush=True, end="")
         print('')

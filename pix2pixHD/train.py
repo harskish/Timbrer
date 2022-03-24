@@ -8,8 +8,8 @@ import torch
 from torch.autograd import Variable
 from collections import OrderedDict
 from subprocess import call
-import fractions
-def lcm(a,b): return abs(a * b)/fractions.gcd(a,b) if a and b else 0
+import math
+def lcm(a,b): return abs(a * b)/math.gcd(a,b) if a and b else 0
 
 from options.train_options import TrainOptions
 from data.data_loader import CreateDataLoader
@@ -21,7 +21,7 @@ def main():
     opt = TrainOptions().parse()
 
     # TEST
-    opt.dataroot = './datasets/timbre/'
+    opt.dataroot = 'D:/datasets/timbrer/torch'
     opt.name = 'timbrer'
     opt.resize_or_crop = 'none'
     opt.label_nc = 0
@@ -31,8 +31,8 @@ def main():
     opt.output_nc = 1
     opt.which_epoch = 'piano_guitar'
     opt.datasets = {
-        'source': 'maestro_piano.npy',
-        'target': 'maestro_guitar.npy'
+        'source': 'torch_logmel_maestro_piano.npy',
+        'target': 'torch_logmel_maestro_guitar.npy'
     }
 
     iter_path = os.path.join(opt.checkpoints_dir, opt.name, 'iter.txt')
