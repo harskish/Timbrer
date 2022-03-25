@@ -109,3 +109,4 @@ data/spectrogram/*
 
 .vscode/
 *.mp3
+data/soundfont/**/*.cfg
