@@ -58,8 +58,10 @@ class NumpyDataset(BaseDataset):
 
         # augmentation with gaussian noise in the mel-space (to do: what is the noise in primal space?)
         if self.opt.isTrain:
-            A_tensor = (A_tensor + torch.randn_like(A_tensor) * 0.5 * torch.rand(1)).clip(0, None)
-            B_tensor = (B_tensor + torch.randn_like(B_tensor) * 0.5 * torch.rand(1)).clip(0, None)
+            if self.opt.noise_src:
+                A_tensor = (A_tensor + torch.randn_like(A_tensor) * 0.5 * torch.rand(1)).clip(0, None)
+            if self.opt.noise_trg:
+                B_tensor = (B_tensor + torch.randn_like(B_tensor) * 0.5 * torch.rand(1)).clip(0, None)
 
         inst_tensor = feat_tensor = 0
 

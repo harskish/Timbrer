@@ -23,13 +23,20 @@ def main():
     # TEST
     opt.dataroot = 'D:/datasets/timbrer/torch'
     opt.name = 'timbrer'
+    opt.save_epoch_freq = 2 # save checkpoint every N epochs
+    opt.niter = 5       # 5 epochs at full LR
+    opt.niter_decay = 5 # 5 epochs of linear LR ramp down
     opt.resize_or_crop = 'none'
     opt.label_nc = 0
     opt.no_instance = True
     opt.timbrer = True
     opt.input_nc = 1
     opt.output_nc = 1
-    opt.which_epoch = 'piano_guitar'
+    
+    
+    opt.noise_src = True; opt.noise_trg = False; opt.which_epoch = 'piano_guitar_denoise' # Denoise
+    #opt.noise_src = True; opt.noise_trg = True; opt.which_epoch = 'piano_guitar_aug' # Augment (ignore noise)
+    
     opt.datasets = {
         'source': 'torch_logmel_maestro_piano.npy',
         'target': 'torch_logmel_maestro_guitar.npy'
