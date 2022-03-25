@@ -8,15 +8,24 @@ from constants import *
 from port_spectrogram import logmel
 import audio_io
 
-# Input spectrogram npys
-files = sys.argv[1:]
-
 device = 'cuda'
 steps = 150
 B = 2 # LBFGS scales poorly with batch size
 func = logmel
 
-specs = np.stack([np.load(p) for p in files], axis=0)
+# Input npys or directories
+paths = [Path(p) for p in sys.argv[1:]]
+
+files = []
+for p in paths:
+    if p.is_dir():
+        files = files + list(p.glob('*.npy'))
+    elif p.suffix == '.npy':
+        files.append(p)
+    
+assert files, 'No spectrograms found'
+
+specs = np.stack([np.load(p).squeeze() for p in files], axis=0)
 specs = torch.tensor(specs, dtype=torch.float32)
 
 res = []

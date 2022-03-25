@@ -21,7 +21,7 @@ def main():
     opt.no_flip = True  # no flip
 
     # TIMBRER
-    opt.dataroot = 'D:/datasets/timbrer/torch'
+    opt.dataroot = 'D:/datasets/timbrer/'
     opt.name = 'timbrer'
     opt.resize_or_crop = 'none'
     opt.label_nc = 0
@@ -30,10 +30,10 @@ def main():
     opt.output_nc = 1
     opt.timbrer = True
     opt.how_many = 100 # how many results to generate
-    opt.which_epoch = 'piano_guitar' #'harp_kalimba'
+    opt.which_epoch = 'piano_guitar_139k'
     opt.datasets = {
-        'source': 'torch_logmel_maestro_piano.npy',
-        'target': 'torch_logmel_maestro_guitar.npy'
+        'source': 'maestro_piano.npy',
+        'target': 'maestro_guitar.npy'
     }
     
     opt.use_encoded_image = True # Adds GT to test set
