@@ -16,7 +16,7 @@ parser.add_argument('paths', help='Path(s) to (directories containing) spectrogr
 parser.add_argument('--steps', help='L-BFGS optimization steps (default: %(default)d)', type=int, default=70)
 parser.add_argument('--batch', help='L-BFGS batch size (default: %(default)d)', type=int, default=2) # LBFGS scales poorly with batch size
 parser.add_argument('--device', help='Compute device (default: %(default)s)', type=str, default='cuda')
-parser.add_argument('--bitrate', help='Output mp3 bitrate in Kbps (default: %(default)dk)', type=int, default=256)
+parser.add_argument('--bitrate', help='Output mp3 bitrate in Kbps (default: %(default)d)', type=int, default=256)
 parser.add_argument('--verbose', help='Verbose mode (print reconstruction loss)', action='store_true')
 args = parser.parse_args()
 
