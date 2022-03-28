@@ -21,8 +21,7 @@ def main():
     opt.no_flip = True  # no flip
 
     # TIMBRER
-    opt.dataroot = './datasets/timbre/'
-    opt.name = 'timbrer'
+    opt.dataroot = 'D:/datasets/timbrer/'
     opt.resize_or_crop = 'none'
     opt.label_nc = 0
     opt.no_instance = True    
@@ -30,7 +29,8 @@ def main():
     opt.output_nc = 1
     opt.timbrer = True
     opt.how_many = 100 # how many results to generate
-    opt.which_epoch = 'piano_guitar' #'harp_kalimba'
+    opt.name = 'piano_guitar_denoise'
+    opt.which_epoch = '10'
     opt.datasets = {
         'source': 'maestro_piano.npy',
         'target': 'maestro_guitar.npy'

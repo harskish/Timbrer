@@ -8,8 +8,8 @@ import torch
 from torch.autograd import Variable
 from collections import OrderedDict
 from subprocess import call
-import fractions
-def lcm(a,b): return abs(a * b)/fractions.gcd(a,b) if a and b else 0
+import math
+def lcm(a,b): return abs(a * b)/math.gcd(a,b) if a and b else 0
 
 from options.train_options import TrainOptions
 from data.data_loader import CreateDataLoader
@@ -21,18 +21,24 @@ def main():
     opt = TrainOptions().parse()
 
     # TEST
-    opt.dataroot = './datasets/timbre/'
-    opt.name = 'timbrer'
+    opt.dataroot = 'D:/datasets/timbrer/torch'
+    opt.save_epoch_freq = 2 # save checkpoint every N epochs
+    opt.niter = 5       # 5 epochs at full LR
+    opt.niter_decay = 5 # 5 epochs of linear LR ramp down
     opt.resize_or_crop = 'none'
     opt.label_nc = 0
     opt.no_instance = True
     opt.timbrer = True
     opt.input_nc = 1
     opt.output_nc = 1
-    opt.which_epoch = 'piano_guitar'
+    
+    
+    opt.noise_src = True; opt.noise_trg = False; opt.name = 'piano_guitar_denoise' # Denoise
+    #opt.noise_src = True; opt.noise_trg = True; opt.name = 'piano_guitar_aug' # Augment (ignore noise)
+    
     opt.datasets = {
-        'source': 'maestro_piano.npy',
-        'target': 'maestro_guitar.npy'
+        'source': 'torch_logmel_maestro_piano.npy',
+        'target': 'torch_logmel_maestro_guitar.npy'
     }
 
     iter_path = os.path.join(opt.checkpoints_dir, opt.name, 'iter.txt')

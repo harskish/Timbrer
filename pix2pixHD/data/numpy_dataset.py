@@ -46,20 +46,22 @@ class NumpyDataset(BaseDataset):
 
         if self.archive_B is None:
             self.archive_B = np.load(self.archive_B_path, 'r')
-        
-
-        # augmentation with gaussian noise in the mel-space (to do: what is the noise in primal space?)
 
         A_data = self.archive_A[self.indices[index]]
-        A_data = np.maximum(np.zeros_like(A_data, dtype=np.float32), A_data + np.random.randn(*A_data.shape).astype(np.float32)*.5*float(np.random.rand()))
         A_data = np.expand_dims(A_data, axis=0)
 
         B_data = self.archive_B[self.indices[index]]
-        B_data = np.maximum(np.zeros_like(B_data, dtype=np.float32), B_data + np.random.randn(*B_data.shape).astype(np.float32)*.5*float(np.random.rand()))
         B_data = np.expand_dims(B_data, axis=0)
 
         A_tensor = torch.from_numpy(A_data)
         B_tensor = torch.from_numpy(B_data)
+
+        # augmentation with gaussian noise in the mel-space (to do: what is the noise in primal space?)
+        if self.opt.isTrain:
+            if self.opt.noise_src:
+                A_tensor = (A_tensor + torch.randn_like(A_tensor) * 0.5 * torch.rand(1)).clip(0, None)
+            if self.opt.noise_trg:
+                B_tensor = (B_tensor + torch.randn_like(B_tensor) * 0.5 * torch.rand(1)).clip(0, None)
 
         inst_tensor = feat_tensor = 0
 

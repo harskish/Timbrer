@@ -4,8 +4,6 @@
 
 import librosa
 import librosa.display
-import matplotlib.pyplot as plt
-import sounddevice as sd  # conda version only supports python 3.6
 from sf2utils.sf2parse import Sf2File # pip install sf2utils
 import numpy as np
 import subprocess
@@ -14,11 +12,8 @@ import urllib.request
 import os
 import zipfile
 import shutil
-import random
-import threading
-import time
-
-import tensorflow as tf
+import torch
+from port_spectrogram import logmel
 
 setDir = 'data/midi/maestro'
 SYNTH_BIN = 'external/windows/timidity++/timidity.exe'
@@ -92,26 +87,6 @@ sample_rate = 44100
 duration = 6.0
 num_samples = int(sample_rate*duration)
 
-# waveform to mel-scaled stft
-def logmel(waveform):
-    z = tf.contrib.signal.stft(waveform, frame_length=4096, frame_step=500)
-    magnitudes = tf.abs(z)
-    filterbank = tf.contrib.signal.linear_to_mel_weight_matrix(
-        num_mel_bins=512, #80
-        num_spectrogram_bins=magnitudes.shape[-1].value,
-        sample_rate=sample_rate,
-        lower_edge_hertz=0.0,
-        upper_edge_hertz=0.5*sample_rate) #8k
-    melspectrogram = tf.tensordot(magnitudes, filterbank, 1)
-    return tf.log1p(melspectrogram)[:512, :512]
-
-# suppress tf output
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-tf.logging.set_verbosity(tf.logging.ERROR)
-if type(tf.contrib) != type(tf): tf.contrib._warning = None
-
-#os.environ['CUDA_VISIBLE_DEVICES'] = '-1' # doesn't make sense to run the small-ish stft on GPU
-
 # dataset parameters
 spectrogram_count = 20000
 block_size = 20 # how many extracts taken from each track
@@ -126,71 +101,65 @@ instruments = {
     #'kalimba' : ('Roland_SC-88.sf2', 'Kalimba'),
     #'pan' : ('Roland_SC-88.sf2', 'Pan flute')
 }
-with tf.Session() as sess:
 
-    # construct the tf graph
-    waveform_data = tf.placeholder(dtype='float32', shape=(num_samples))
-    output = logmel(waveform_data)
+# render the given midi file with the given instruments, generate spectrograms and save
+def renderMidi(i, f, cfgs):
+    print(str(f), flush=True)
+    min_len = 2 << 63
+    # render the waveform files
+    for (j, instrument) in enumerate(instruments):
+        print(instrument, '...')
+        # synthesize midi with timidity++, obtain waveform
+        file = Path(f).with_suffix('.'+instrument+'.wav')
+        if midi2wav(f, file, cfgs[j])!=0:
+            print('midi2wav failed!')
+            return
+        cur_len = len(librosa.load(str(file), sr = sample_rate)[0])
+        min_len = min(min_len, cur_len)
 
-    # initialize instruments configurations and result files
-    cfgs = []
+    # turn waveforms into sets of spectrograms
     for instrument in instruments:
-        os.makedirs('data/spectrogram', exist_ok=True)
-        dataFile = Path('data/spectrogram/maestro_'+instrument+'.npy')
-        if dataFile.exists():
-            print(str(dataFile), 'already exists!')
-            #continue
-        else:
-            np.save(str(dataFile), np.zeros((spectrogram_count, 512,512), dtype='float32'))
-        cfgs.append(select_midi_soundfont(*instruments[instrument]))
-    
-    if len(cfgs) == len(instruments):
-        # render the given midi file with the given instruments, generate spectrograms and save
-        def renderMidi(i, f, cfgs):
-            print(str(f), flush=True)
-            min_len = None
-            # render the waveform files
-            for (j, instrument) in enumerate(instruments):
-                print(instrument, '...')
-                # synthesize midi with timidity++, obtain waveform
-                file = Path(f).with_suffix('.'+instrument+'.wav')
-                if midi2wav(f, file, cfgs[j])!=0:
-                    print('midi2wav failed!')
-                    result[:,:,i*block_size:(i+1)*block_size] = np.zeros((result.shape[0], result.shape[1], block_size))
-                    return
-                cur_len = len(librosa.load(str(file), sr = sample_rate)[0])
-                if j==0 or cur_len<min_len:
-                    min_len = cur_len
+        # open waveform and result file
+        waveform, _ = librosa.load(str(Path(f).with_suffix('.'+instrument+'.wav')), sr = sample_rate)
+        fp = np.load(Path('data/spectrogram/maestro_'+instrument+'.npy'), mmap_mode='r+')
+        # process extracts of the waveform at uniform intervals
+        for (j, start) in enumerate(np.linspace(0, min_len-num_samples-1, num=block_size)):
+            layer = i*block_size+j
+            if layer>=spectrogram_count:
+                break
+            start = min(int(start), min_len-num_samples-1)
+            # output the spectrogram
+            wf = torch.from_numpy(waveform[start:start+num_samples]).unsqueeze(0).to('cuda')
+            fp[layer,:,:] = logmel(wf).cpu().numpy()
+            # print progress
+            print('\r', instrument, ' ', layer + 1, '/', spectrogram_count, 'done', flush=True, end="")
+        print('')
+        #write to disk
+        del fp
+    # cleanup; remove the waveforms
+    for instrument in instruments:
+        file = Path(f).with_suffix('.'+instrument+'.wav')
+        os.remove(file)
 
-            # turn waveforms into sets of spectrograms
-            for instrument in instruments:
-                # open waveform and result file
-                waveform, _ = librosa.load(str(Path(f).with_suffix('.'+instrument+'.wav')), sr = sample_rate)
-                fp = np.load(Path('data/spectrogram/maestro_'+instrument+'.npy'), mmap_mode='r+')
-                # process extracts of the waveform at uniform intervals
-                for (j, start) in enumerate(np.linspace(0, min_len-num_samples-1, num=block_size)):
-                    layer = i*block_size+j
-                    if layer>=spectrogram_count:
-                        break
-                    start = min(int(start), min_len-num_samples-1)
-                    # output the spectrogram
-                    fp[layer,:,:] = sess.run(output, feed_dict={waveform_data:waveform[start:start+num_samples]})
-                    # print progress
-                    print('\r', instrument, ' ', layer,'/',spectrogram_count,'done', flush=True,end="")
-                print('')
-                #write to disk
-                del fp
-            # cleanup; remove the waveforms
-            for instrument in instruments:
-                file = Path(f).with_suffix('.'+instrument+'.wav')
-                os.remove(file)
+# initialize instruments configurations and result files
+cfgs = []
+for instrument in instruments:
+    os.makedirs('data/spectrogram', exist_ok=True)
+    dataFile = Path('data/spectrogram/maestro_'+instrument+'.npy')
+    if dataFile.exists():
+        print(str(dataFile), 'already exists!')
+        #continue
+    else:
+        np.save(str(dataFile), np.zeros((spectrogram_count, 512,512), dtype='float32'))
+    cfgs.append(select_midi_soundfont(*instruments[instrument]))
 
-        # gather the files and process
-        files = []
-        for f in find_files(setDir):
-            if 'midi' in Path(f).suffix:
-                files.append(f)
-        for (i, f) in enumerate(files):
-            if i*block_size<spectrogram_count:
-                renderMidi(i, f, cfgs)
-        print('done!')
+# gather the files and process
+if len(cfgs) == len(instruments):
+    files = []
+    for f in find_files(setDir):
+        if 'midi' in Path(f).suffix:
+            files.append(f)
+    for (i, f) in enumerate(files):
+        if i*block_size<spectrogram_count:
+            renderMidi(i, f, cfgs)
+    print('done!')
