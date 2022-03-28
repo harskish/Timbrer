@@ -3,9 +3,6 @@ import torch.optim as optim
 import torch.nn.functional as F
 #import tensorflow as tf
 import numpy as np
-import librosa
-import librosa.display
-import torchlibrosa as tl
 from nnAudio import features
 import audio_io
 from pathlib import Path
@@ -17,6 +14,9 @@ plt.ion()
 from constants import *
 
 def plot_comp(data, labels, y_scale='log'):
+    import librosa
+    import librosa.display
+
     num_methods = len(data)
     N, H, W = data[0].shape
     
@@ -69,12 +69,14 @@ def logmel_tf(waveform):
     return tf.math.log1p(melspectrogram)
 
 def stft_pt_tl(waveform):
+    import torchlibrosa as tl
     if 'tl_stft' not in cache:
         cache['tl_stft'] = tl.Spectrogram(n_fft=n_fft, hop_length=hop, power=1).cuda()
     
     return cache['tl_stft'].to(waveform.device)(waveform)[:, 0, :, :]
 
 def logmel_tl(waveform):
+    import torchlibrosa as tl
     if 'tl_mel' not in cache:
         cache['tl_mel'] = torch.nn.Sequential(
             tl.Spectrogram(n_fft=n_fft, hop_length=hop, power=1),
@@ -96,7 +98,7 @@ def logstft(waveform):
 def logmel(waveform):
     if 'nn_mel' not in cache:
         cache['nn_mel'] = features.MelSpectrogram(
-            sr=sample_rate, n_fft=n_fft, n_mels=n_mels, power=1, fmin=0, fmax=0.5*sample_rate, hop_length=hop).cuda()
+            sr=sample_rate, n_fft=n_fft, n_mels=n_mels, power=1, fmin=0, fmax=0.5*sample_rate, hop_length=hop, verbose=False).cuda()
 
     melspectrogram = cache['nn_mel'].to(waveform.device)(waveform).permute(0, 2, 1)
     return torch.log1p(melspectrogram)
